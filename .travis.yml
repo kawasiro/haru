@@ -3,12 +3,10 @@ language: go
 sudo: false
 
 install:
-  # dependencies - TODO use godep or etc
-  - go get github.com/jhoonb/archivex
-  - go get github.com/stretchr/testify/assert
+  - godep restore
 
 script:
-  - ./ci/unittest.sh
+  - go test ./...
   - go build -v
 
 notification:

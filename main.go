@@ -7,8 +7,8 @@ import (
 
 	"github.com/jhoonb/archivex"
 
-	"./gallery"
-	"./network"
+	"github.com/if1live/haru/gallery"
+	"github.com/if1live/haru/network"
 )
 
 func FetchFileWithChannel(url string, fileName string, ch chan string) {

@@ -28,3 +28,7 @@ haru
 _cache
 _output
 *.zip
+
+# godep
+Godeps/Readme
+Godeps/_workspace
