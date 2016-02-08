@@ -25,6 +25,7 @@ type Gallery interface {
 
 	ReadLinks(html string) []string
 	ReadMetadata(html string) Metadata
+	ReadList(html string) []Metadata
 
 	Download(id string) string
 	Metadata(id string) Metadata
@@ -35,7 +36,7 @@ type Metadata struct {
 	// 갤러리에 따라 채울수 있는것까지만 채우기를 시도
 	Id         string   `json:"id"`
 	Title      string   `json:"title"`
-	Cover      string   `json:"cover"`
+	Covers     []string `json:"covers"`
 	Artists    []string `json:"artists"`
 	Groups     []string `json:"groups"`
 	Type       string   `json:"type"`

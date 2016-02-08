@@ -21,7 +21,7 @@ func ReadTestHtml(filepath string) string {
 func TestMarshal(t *testing.T) {
 	metadata := Metadata{
 		Title:      "Sora no Omocha",
-		Cover:      "https://tn.hitomi.la/bigtn/405092/001.jpg.jpg",
+		Covers:     []string{"https://tn.hitomi.la/bigtn/405092/001.jpg.jpg"},
 		Artists:    []string{"hiten onee-ryuu"},
 		Groups:     []string{"shadow sorceress communication protocol"},
 		Type:       "doujinshi",

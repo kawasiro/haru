@@ -1,6 +1,7 @@
 package gallery
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/if1live/haru/network"
 	"github.com/jhoonb/archivex"
+	"golang.org/x/net/html"
 )
 
 const CacheDirName = "_cache"
@@ -66,31 +68,35 @@ func (g Hitomi) readGeneralMetadata(html string, keyword string) []string {
 	// <li><a href="/group/shadow.....-1.html">shadow sorceress communication protocol</a></li>
 	// li tag + a tag + /keyword/ 형태의 url에서 정보 추출하는 함수
 	re := regexp.MustCompile(`<li><a href="/` + keyword + `/.*\.html">(.+)</a></li>`)
-
 	elems := []string{}
 	for _, m := range re.FindAllStringSubmatch(html, -1) {
-		elem := m[1]
-		maleSymbol := " ♂"
-		femaleSymbol := " ♀"
-
-		if strings.Contains(elem, maleSymbol) {
-			elem = strings.Replace(elem, maleSymbol, "", -1)
-			elem = "male:" + elem
-		}
-		if strings.Contains(elem, femaleSymbol) {
-			elem = strings.Replace(elem, femaleSymbol, "", -1)
-			elem = "female:" + elem
-		}
+		elem := g.sanitizeTag(m[1])
 		elems = append(elems, elem)
 	}
 	return elems
 }
 
-func (g Hitomi) readCover(html string) string {
+func (g Hitomi) sanitizeTag(tag string) string {
+	maleSymbol := " ♂"
+	femaleSymbol := " ♀"
+
+	if strings.Contains(tag, maleSymbol) {
+		tag = strings.Replace(tag, maleSymbol, "", -1)
+		tag = "male:" + tag
+	}
+	if strings.Contains(tag, femaleSymbol) {
+		tag = strings.Replace(tag, femaleSymbol, "", -1)
+		tag = "female:" + tag
+	}
+	return tag
+}
+
+func (g Hitomi) readCover(html string) []string {
 	// Cover
 	// <div class="cover"><a href="/reader/405092.html"><img src="//tn.hitomi.la/bigtn/405092/001.jpg.jpg"></a></div>
 	coverRe := regexp.MustCompile(`<div class="cover"><a href=".+"><img src="(.+)"></a></div>`)
-	return "https:" + coverRe.FindStringSubmatch(html)[1]
+	cover := "https:" + coverRe.FindStringSubmatch(html)[1]
+	return []string{cover}
 }
 
 func (g Hitomi) readTitle(html string) string {
@@ -158,7 +164,7 @@ func (g Hitomi) ReadMetadata(html string) Metadata {
 	return Metadata{
 		Id:         g.readId(html),
 		Title:      g.readTitle(html),
-		Cover:      g.readCover(html),
+		Covers:     g.readCover(html),
 		Groups:     g.readGeneralMetadata(html, "group"),
 		Artists:    g.readGeneralMetadata(html, "artist"),
 		Characters: g.readGeneralMetadata(html, "character"),
@@ -168,6 +174,160 @@ func (g Hitomi) ReadMetadata(html string) Metadata {
 		Language:   g.readLanguage(html),
 		Date:       g.readDate(html),
 	}
+}
+
+func (g Hitomi) getElementByClassName(n *html.Node, classname string) *html.Node {
+	for _, a := range n.Attr {
+		if a.Key == "class" {
+			classes := strings.Split(a.Val, " ")
+			for _, val := range classes {
+				if val == classname {
+					return n
+				}
+			}
+		}
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		found := g.getElementByClassName(c, classname)
+		if found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+func (g Hitomi) getElementsByTagName(n *html.Node, tag string) []*html.Node {
+	retval := []*html.Node{}
+	return g.getElementsByTagName_r(n, tag, retval)
+}
+
+func (g Hitomi) getElementsByTagName_r(n *html.Node, tag string, retval []*html.Node) []*html.Node {
+	if n.Type == html.ElementNode && n.Data == tag {
+		retval = append(retval, n)
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		retval = g.getElementsByTagName_r(c, tag, retval)
+	}
+	return retval
+}
+
+func (g Hitomi) readTitleNode(c *html.Node) string {
+	titleNode := g.getElementsByTagName(c, "h1")[0]
+	title := titleNode.FirstChild.FirstChild.Data
+	return title
+}
+
+func (g Hitomi) readIdNode(c *html.Node) string {
+	titleNode := g.getElementsByTagName(c, "h1")[0]
+	url := titleNode.FirstChild.Attr[0].Val
+	re := regexp.MustCompile(`/galleries/(.+).html`)
+	return re.FindStringSubmatch(url)[1]
+}
+
+func (g Hitomi) readCoverNode(c *html.Node) []string {
+	coverParentNode := g.getElementByClassName(c, "dj-img-cont")
+	coverNodes := g.getElementsByTagName(coverParentNode, "img")
+	covers := []string{}
+	for _, c := range coverNodes {
+		cover := "https:" + c.Attr[0].Val
+		covers = append(covers, cover)
+	}
+	return covers
+}
+
+func (g Hitomi) readArtistNode(c *html.Node) []string {
+	artistParentNode := g.getElementByClassName(c, "artist-list")
+	artistNodes := g.getElementsByTagName(artistParentNode, "a")
+	artists := []string{}
+	for _, c := range artistNodes {
+		artist := c.FirstChild.Data
+		artists = append(artists, artist)
+	}
+	return artists
+}
+
+func (g Hitomi) readTagNode(c *html.Node) []string {
+	tagParentNode := g.getElementByClassName(c, "relatedtags")
+	tagNodes := g.getElementsByTagName(tagParentNode, "a")
+	tags := []string{}
+	for _, c := range tagNodes {
+		tag := c.FirstChild.Data
+		tag = g.sanitizeTag(tag)
+		tags = append(tags, tag)
+	}
+	return tags
+}
+
+func (g Hitomi) readDateNode(c *html.Node) string {
+	dateNode := g.getElementByClassName(c, "date")
+	date := dateNode.FirstChild.Data
+	return date
+}
+
+func (g Hitomi) ReadEntryNode(n *html.Node) Metadata {
+	// language + type
+	// 특별한 구분자가 없어서 a 태그 전부 뽑은후 URL로 찾기
+	galleryType := ""
+	language := ""
+	series := []string{}
+
+	descNode := g.getElementByClassName(n, "dj-desc")
+	aTags := g.getElementsByTagName(descNode, "a")
+	for _, c := range aTags {
+		if c.Attr[0].Key != "href" {
+			continue
+		}
+		url := c.Attr[0].Val
+		if strings.HasPrefix(url, "/type/") {
+			// /type/doujinshi-all-1.html
+			re := regexp.MustCompile(`/type/(.+)-(.+)-(.+).html`)
+			galleryType = re.FindStringSubmatch(url)[1]
+		}
+		if strings.HasPrefix(url, "/index-") {
+			// /index-korean-1.html
+			re := regexp.MustCompile(`/index-(.+)-1.html`)
+			language = re.FindStringSubmatch(url)[1]
+		}
+		if strings.HasPrefix(url, "/series/") {
+			// /series/kantai%20collection-all-1.html
+			series = append(series, c.FirstChild.Data)
+		}
+	}
+
+	return Metadata{
+		Id:         g.readIdNode(n),
+		Title:      g.readTitleNode(n),
+		Covers:     g.readCoverNode(n),
+		Artists:    g.readArtistNode(n),
+		Groups:     []string{},
+		Type:       galleryType,
+		Language:   language,
+		Series:     series,
+		Characters: []string{},
+		Tags:       g.readTagNode(n),
+		Date:       g.readDateNode(n),
+	}
+}
+
+func (g Hitomi) ReadList(htmlsrc string) []Metadata {
+	entries := []Metadata{}
+
+	doc, err := html.Parse(strings.NewReader(htmlsrc))
+	if err != nil {
+		panic(err)
+	}
+
+	listNode := g.getElementByClassName(doc, "gallery-content")
+	for c := listNode.FirstChild; c != nil; c = c.NextSibling {
+		// 개행 노드는 쓸모없다
+		if len(strings.Trim(c.Data, "\n")) == 0 {
+			continue
+		}
+		metadata := g.ReadEntryNode(c)
+		entries = append(entries, metadata)
+	}
+	fmt.Println(len(entries))
+	return entries
 }
 
 func fetchFileWithCh(f network.Fetcher, url string, fileName string, ch chan string) {

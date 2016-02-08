@@ -3,6 +3,8 @@ package gallery
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUrls_Hitomi(t *testing.T) {
@@ -120,7 +122,7 @@ func TestReadMetadata_Hitomi(t *testing.T) {
 	expected := Metadata{
 		Id:         "405092",
 		Title:      "Sora no Omocha",
-		Cover:      "https://tn.hitomi.la/bigtn/405092/001.jpg.jpg",
+		Covers:     []string{"https://tn.hitomi.la/bigtn/405092/001.jpg.jpg"},
 		Artists:    []string{"hiten onee-ryuu"},
 		Groups:     []string{"shadow sorceress communication protocol"},
 		Type:       "doujinshi",
@@ -132,5 +134,32 @@ func TestReadMetadata_Hitomi(t *testing.T) {
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("ReadMetadata - expected %q, got %q", expected, actual)
+	}
+}
+
+func TestReadList_Hitomi(t *testing.T) {
+	html := ReadTestHtml("hitomi/list.html")
+	g := New(TypeHitomi)
+	actual := g.ReadList(html)
+
+	assert.Equal(t, len(actual), 25)
+	expected := Metadata{
+		Id:    "902149",
+		Title: "Shikisokuzekuu Ikkousen wa Mita",
+		Covers: []string{
+			"https://tn.hitomi.la/bigtn/902149/1.jpg.jpg",
+			"https://tn.hitomi.la/bigtn/902149/13.jpg.jpg",
+		},
+		Artists:    []string{"shironeko sanbou"},
+		Groups:     []string{},
+		Type:       "doujinshi",
+		Language:   "korean",
+		Series:     []string{"kantai collection"},
+		Characters: []string{},
+		Tags:       []string{"female:masturbation", "female:stockings", "female:voyeurism", "male:shota"},
+		Date:       "2016-02-06 01:19:00-06",
+	}
+	if !reflect.DeepEqual(actual[0], expected) {
+		t.Errorf("ReadList - expected %q, got %q", expected, actual[0])
 	}
 }
