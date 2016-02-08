@@ -43,12 +43,12 @@ func TestUrls_Hitomi(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		g := New(TypeHitomi, c.id)
-		if g.GalleryUrl() != c.galleryUrl {
-			t.Errorf("GalleryUrl - expected %q, got %q", c.galleryUrl, g.GalleryUrl())
+		g := New(TypeHitomi)
+		if g.GalleryUrl(c.id) != c.galleryUrl {
+			t.Errorf("GalleryUrl - expected %q, got %q", c.galleryUrl, g.GalleryUrl(c.id))
 		}
-		if g.ReaderUrl() != c.readerUrl {
-			t.Errorf("ReaderUrl - expected %q, got %q", c.readerUrl, g.ReaderUrl())
+		if g.ReaderUrl(c.id) != c.readerUrl {
+			t.Errorf("ReaderUrl - expected %q, got %q", c.readerUrl, g.ReaderUrl(c.id))
 		}
 		if g.AllFeed() != c.allFeed {
 			t.Errorf("AllFeed - expected %q, got %q", c.allFeed, g.AllFeed())
@@ -79,7 +79,7 @@ func TestReadLinks_Hitomi(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		g := New(TypeHitomi, "sample-id")
+		g := New(TypeHitomi)
 		got := g.ReadLinks(c.line)
 		if !reflect.DeepEqual(got, c.links) {
 			t.Errorf("ReadLinks - expected %q, got %q", c.links, got)
@@ -89,7 +89,7 @@ func TestReadLinks_Hitomi(t *testing.T) {
 
 func TestReadLinks_Hitomi_Real(t *testing.T) {
 	html := ReadTestHtml("hitomi/reader.html")
-	g := New(TypeHitomi, "sample-id")
+	g := New(TypeHitomi)
 	actual := g.ReadLinks(html)
 	expectedUrls := []string{
 		"https://g.hitomi.la/galleries/405092/001.jpg",
@@ -114,7 +114,7 @@ func TestReadLinks_Hitomi_Real(t *testing.T) {
 
 func TestReadMetadata_Hitomi(t *testing.T) {
 	html := ReadTestHtml("hitomi/gallery.html")
-	g := New(TypeHitomi, "sample-id")
+	g := New(TypeHitomi)
 	actual := g.ReadMetadata(html)
 
 	expected := Metadata{

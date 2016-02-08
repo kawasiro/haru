@@ -21,26 +21,26 @@ func splitServerAndId(target string) (service, id string) {
 	return
 }
 
-func createGallery(target string) gallery.Gallery {
+func createGallery(target string) (gallery.Gallery, string) {
 	service, id := splitServerAndId(target)
 	switch service {
 	case "hitomi":
-		return gallery.New(gallery.TypeHitomi, id)
+		return gallery.New(gallery.TypeHitomi), id
 	default:
 		// 기본값으로 때우기에는 id도 모를 확률이 높다
-		return nil
+		return nil, ""
 	}
 }
 
 func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Path[len("/download/"):]
-	g := createGallery(target)
+	g, id := createGallery(target)
 	if g == nil {
 		fmt.Fprintf(w, "Unknown : %s", target)
 		return
 	}
-	metadata := g.Metadata()
-	fileName := g.Download()
+	metadata := g.Metadata(id)
+	fileName := g.Download(id)
 
 	// http://stackoverflow.com/questions/24116147/golang-how-to-download-file-in-browser-from-golang-server
 	w.Header().Set("Content-Disposition", "attachment; filename="+metadata.ZipFileName())
@@ -52,23 +52,23 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 func detailHandler(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Path[len("/detail/"):]
-	g := createGallery(target)
+	g, id := createGallery(target)
 	if g == nil {
 		fmt.Fprintf(w, "Unknown : %s", target)
 		return
 	}
-	metadata := g.Metadata()
+	metadata := g.Metadata(id)
 	fmt.Fprintf(w, "%s", metadata.Marshal())
 }
 
 func enqueueHandler(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Path[len("/enqueue/"):]
-	g := createGallery(target)
+	g, id := createGallery(target)
 	if g == nil {
 		fmt.Fprintf(w, "Unknown : %s", target)
 		return
 	}
-	metadata := g.Metadata()
+	metadata := g.Metadata(id)
 	fmt.Fprintf(w, "%s", metadata.Marshal())
 
 	// TODO work queue required
@@ -76,7 +76,7 @@ func enqueueHandler(w http.ResponseWriter, r *http.Request) {
 
 func listHandler(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Path[len("/enqueue/"):]
-	g := createGallery(target)
+	g, _ := createGallery(target)
 	if g == nil {
 		fmt.Fprintf(w, "Unknown : %s", target)
 		return
@@ -94,8 +94,8 @@ func mainSvr() {
 
 func mainCli() {
 	id := os.Getenv("ID")
-	g := gallery.New(gallery.TypeHitomi, id)
-	g.Download()
+	g := gallery.New(gallery.TypeHitomi)
+	g.Download(id)
 }
 
 func main() {

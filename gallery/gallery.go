@@ -14,9 +14,9 @@ type GalleryType int32
 
 type Gallery interface {
 	// 대표 페이지. 작가, 제목등의 추가 정보 획득가능
-	GalleryUrl() string
+	GalleryUrl(id string) string
 	// 이미지를 볼수 있는 페이지. 1페이지에 모두 있을때 가정
-	ReaderUrl() string
+	ReaderUrl(id string) string
 
 	AllFeed() string
 	LangFeed(lang string) string
@@ -26,8 +26,8 @@ type Gallery interface {
 	ReadLinks(html string) []string
 	ReadMetadata(html string) Metadata
 
-	Download() string
-	Metadata() Metadata
+	Download(id string) string
+	Metadata(id string) Metadata
 }
 
 type Metadata struct {
@@ -88,11 +88,11 @@ func (m *Metadata) Marshal() []byte {
 	return out.Bytes()
 }
 
-func New(t GalleryType, id string) Gallery {
+func New(t GalleryType) Gallery {
 	if t == TypeHitomi {
-		return Hitomi{id}
+		return Hitomi{}
 	} else {
 		// default
-		return Hitomi{id}
+		return Hitomi{}
 	}
 }

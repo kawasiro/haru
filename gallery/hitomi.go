@@ -13,9 +13,7 @@ import (
 const CacheDirName = "_cache"
 const OutputDirName = "output/hitomi/"
 
-type Hitomi struct {
-	Id string
-}
+type Hitomi struct{}
 
 func (g Hitomi) replaceTemplatedUrl(tpl, key string) string {
 	const target = "{{.Key}}"
@@ -24,14 +22,14 @@ func (g Hitomi) replaceTemplatedUrl(tpl, key string) string {
 	return url
 }
 
-func (g Hitomi) GalleryUrl() string {
+func (g Hitomi) GalleryUrl(id string) string {
 	tpl := "https://hitomi.la/galleries/{{.Key}}.html"
-	return g.replaceTemplatedUrl(tpl, g.Id)
+	return g.replaceTemplatedUrl(tpl, id)
 }
 
-func (g Hitomi) ReaderUrl() string {
+func (g Hitomi) ReaderUrl(id string) string {
 	tpl := "https://hitomi.la/reader/{{.Key}}.html"
-	return g.replaceTemplatedUrl(tpl, g.Id)
+	return g.replaceTemplatedUrl(tpl, id)
 }
 
 func (g Hitomi) AllFeed() string {
@@ -181,21 +179,20 @@ func fetchFileWithCh(f network.Fetcher, url string, fileName string, ch chan str
 	ch <- dstFilePath
 }
 
-func (g Hitomi) Metadata() Metadata {
+func (g Hitomi) Metadata(id string) Metadata {
 	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
-	galleryHtml := fetcher.Fetch(g.GalleryUrl()).String()
+	galleryHtml := fetcher.Fetch(g.GalleryUrl(id)).String()
 	return g.ReadMetadata(galleryHtml)
 }
 
-func (g Hitomi) Download() string {
+func (g Hitomi) Download(id string) string {
 	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
 
 	// fetch gallery and extract metadata
-	galleryHtml := fetcher.Fetch(g.GalleryUrl()).String()
-	metadata := g.ReadMetadata(galleryHtml)
+	metadata := g.Metadata(id)
 
 	// fetch reader url
-	readerHtml := fetcher.Fetch(g.ReaderUrl()).String()
+	readerHtml := fetcher.Fetch(g.ReaderUrl(id)).String()
 	links := g.ReadLinks(readerHtml)
 
 	// download images
