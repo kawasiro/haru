@@ -32,8 +32,8 @@ func TestFetch_HttpFetcher(t *testing.T) {
 			FetchCodeErrorNetworkNormal,
 		},
 		{
-			"http://192.168.123.123:1234/",
-			FetchCodeErrorNetworkTimeout,
+			"http://www.this-is-not-exist-domain-maybe.com/",
+			FetchCodeErrorNetworkNormal,
 		},
 	}
 	for _, c := range cases {

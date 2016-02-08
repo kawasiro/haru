@@ -121,7 +121,10 @@ func (f *HttpFetcher) Fetch(rawurl string) *FetchResult {
 	}
 	result := f.fetch(client, rawurl)
 
-	f.saveCacheFile(result)
+	// 실패한 요청의 캐시는 저장할 필요 없다
+	if result.IsSuccess() {
+		f.saveCacheFile(result)
+	}
 
 	return result
 }
