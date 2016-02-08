@@ -118,6 +118,7 @@ func TestReadMetadata_Hitomi(t *testing.T) {
 	actual := g.ReadMetadata(html)
 
 	expected := Metadata{
+		Id:         "405092",
 		Title:      "Sora no Omocha",
 		Cover:      "https://tn.hitomi.la/bigtn/405092/001.jpg.jpg",
 		Artists:    []string{"hiten onee-ryuu"},

@@ -1,8 +1,13 @@
 package gallery
 
 import (
+	"log"
+	"os"
 	"regexp"
 	"strings"
+
+	"github.com/if1live/haru/network"
+	"github.com/jhoonb/archivex"
 )
 
 type Hitomi struct {
@@ -94,6 +99,21 @@ func (g Hitomi) readTitle(html string) string {
 	return titleRe.FindStringSubmatch(html)[1]
 }
 
+func (g Hitomi) readId(html string) string {
+	galleryRe := regexp.MustCompile(`<a href="/reader/(.+).html"><h1>Read Online</h1></a>`)
+	galleryMatch := galleryRe.FindStringSubmatch(html)
+	if len(galleryMatch) > 0 {
+		return galleryMatch[1]
+	}
+
+	readerRe := regexp.MustCompile(`<a class="brand" href="/galleries/(.+).html">Gallery Info</a>`)
+	readerMatch := readerRe.FindStringSubmatch(html)
+	if len(readerMatch) > 0 {
+		return readerMatch[1]
+	}
+	return ""
+}
+
 func (g Hitomi) readType(html string) string {
 	// Type: url = /type/ 에서 유도
 	// <a href="/type/doujinshi-all-1.html">
@@ -135,6 +155,7 @@ func (g Hitomi) ReadMetadata(html string) Metadata {
 	html = g.extractUsefulHtml(html)
 
 	return Metadata{
+		Id:         g.readId(html),
 		Title:      g.readTitle(html),
 		Cover:      g.readCover(html),
 		Groups:     g.readGeneralMetadata(html, "group"),
@@ -146,4 +167,53 @@ func (g Hitomi) ReadMetadata(html string) Metadata {
 		Language:   g.readLanguage(html),
 		Date:       g.readDate(html),
 	}
+}
+
+func fetchFileWithCh(f network.Fetcher, url string, fileName string, ch chan string) {
+	result := f.Fetch(url)
+	log.Printf("%s success\n", result.Url)
+
+	dstFilePath := fileName
+	result.SaveToFile(dstFilePath)
+	ch <- dstFilePath
+}
+
+func (g Hitomi) Download() string {
+	const CacheDirName = "_cache"
+	const OutputDirName = "output/hitomi/"
+	os.MkdirAll(OutputDirName, 0755)
+
+	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
+
+	// fetch gallery and extract metadata
+	galleryHtml := fetcher.Fetch(g.GalleryUrl()).String()
+	metadata := g.ReadMetadata(galleryHtml)
+
+	// fetch reader url
+	readerHtml := fetcher.Fetch(g.ReaderUrl()).String()
+	links := g.ReadLinks(readerHtml)
+
+	// download images
+	ch := make(chan string)
+	for _, link := range links {
+		fileName := network.ParseUrl(link).FileName
+		fileName = network.AlignFileName(fileName)
+		go fetchFileWithCh(fetcher, link, fileName, ch)
+	}
+
+	zipFileName := OutputDirName + metadata.ZipFileName()
+
+	// make zip
+	zip := new(archivex.ZipFile)
+	zip.Create(zipFileName)
+	zip.Add("metadata.json", metadata.Marshal())
+	for i := 0; i < len(links); i++ {
+		dstFilePath := <-ch
+		zip.AddFile(dstFilePath)
+		os.Remove(dstFilePath)
+	}
+	zip.Close()
+	log.Printf("%s success\n", zipFileName)
+
+	return zipFileName
 }

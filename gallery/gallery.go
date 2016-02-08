@@ -3,6 +3,7 @@ package gallery
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 )
 
 const (
@@ -24,11 +25,14 @@ type Gallery interface {
 
 	ReadLinks(html string) []string
 	ReadMetadata(html string) Metadata
+
+	Download() string
 }
 
 type Metadata struct {
 	// 제공하는 메타데이터는 갤러리의 종류에 따라 다르다
 	// 갤러리에 따라 채울수 있는것까지만 채우기를 시도
+	Id         string   `json:"id"`
 	Title      string   `json:"title"`
 	Cover      string   `json:"cover"`
 	Artists    []string `json:"artists"`
@@ -39,6 +43,37 @@ type Metadata struct {
 	Characters []string `json:"characters"`
 	Tags       []string `json:"tags"`
 	Date       string   `json:"date"`
+}
+
+func (m *Metadata) ZipFileName() string {
+	// title을 그대로 제목으로 쓰기에는 특수문자의 함정이 있다
+	// 간단하게 걸러내기
+	tokens := []string{
+		m.Id,
+		m.Title,
+	}
+	name := strings.Join(tokens, "-")
+
+	replaceTable := []struct {
+		before string
+		after  string
+	}{
+		{" ", "_"},
+		{"&nbsp;", ""},
+		{"&amp;", ""},
+		{"&lt;", ""},
+		{"&gt;", ""},
+		{"&quot;", ""},
+		{".", ""},
+		{",", ""},
+	}
+
+	for _, tuple := range replaceTable {
+		name = strings.Replace(name, tuple.before, tuple.after, -1)
+	}
+
+	name = name + ".zip"
+	return name
 }
 
 func (m *Metadata) Marshal() []byte {

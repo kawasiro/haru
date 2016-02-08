@@ -3,6 +3,8 @@ package gallery
 import (
 	"io/ioutil"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // test helper function
@@ -34,4 +36,12 @@ func TestMarshal(t *testing.T) {
 	if len(data) == 0 {
 		t.Errorf("Marshal")
 	}
+}
+
+func TestZipFileName(t *testing.T) {
+	metadata := Metadata{
+		Id:    "1234",
+		Title: "abc &quot;...efg...&quot;",
+	}
+	assert.Equal(t, metadata.ZipFileName(), "1234-abc_efg.zip", "")
 }
