@@ -32,3 +32,6 @@ _output
 # godep
 Godeps/Readme
 Godeps/_workspace
+
+# autoenv
+.env
