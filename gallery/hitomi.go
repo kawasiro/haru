@@ -9,22 +9,40 @@ type Hitomi struct {
 	Id string
 }
 
+func (g Hitomi) replaceTemplatedUrl(tpl, key string) string {
+	const target = "{{.Key}}"
+	url := strings.Replace(tpl, target, key, -1)
+	url = strings.Replace(url, " ", "%20", -1)
+	return url
+}
+
 func (g Hitomi) GalleryUrl() string {
-	tokens := []string{
-		"https://hitomi.la/galleries/",
-		g.Id,
-		".html",
-	}
-	return strings.Join(tokens, "")
+	tpl := "https://hitomi.la/galleries/{{.Key}}.html"
+	return g.replaceTemplatedUrl(tpl, g.Id)
 }
 
 func (g Hitomi) ReaderUrl() string {
-	tokens := []string{
-		"https://hitomi.la/reader/",
-		g.Id,
-		".html",
-	}
-	return strings.Join(tokens, "")
+	tpl := "https://hitomi.la/reader/{{.Key}}.html"
+	return g.replaceTemplatedUrl(tpl, g.Id)
+}
+
+func (g Hitomi) AllFeed() string {
+	return "https://hitomi.la/index-all.atom"
+}
+
+func (g Hitomi) LangFeed(lang string) string {
+	tpl := "https://hitomi.la/index-{{.Key}}.atom"
+	return g.replaceTemplatedUrl(tpl, lang)
+}
+
+func (g Hitomi) TagFeed(tag string) string {
+	tpl := "https://hitomi.la/tag/{{.Key}}-all.atom"
+	return g.replaceTemplatedUrl(tpl, tag)
+}
+
+func (g Hitomi) ArtistFeed(artist string) string {
+	tpl := "https://hitomi.la/artist/{{.Key}}-all.atom"
+	return g.replaceTemplatedUrl(tpl, artist)
 }
 
 func (g Hitomi) ReadLinks(html string) []string {
@@ -48,8 +66,15 @@ func (g Hitomi) readGeneralMetadata(html string, keyword string) []string {
 		elem := m[1]
 		maleSymbol := " ♂"
 		femaleSymbol := " ♀"
-		elem = strings.Replace(elem, maleSymbol, "-male", -1)
-		elem = strings.Replace(elem, femaleSymbol, "-female", -1)
+
+		if strings.Contains(elem, maleSymbol) {
+			elem = strings.Replace(elem, maleSymbol, "", -1)
+			elem = "male:" + elem
+		}
+		if strings.Contains(elem, femaleSymbol) {
+			elem = strings.Replace(elem, femaleSymbol, "", -1)
+			elem = "female:" + elem
+		}
 		elems = append(elems, elem)
 	}
 	return elems

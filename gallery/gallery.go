@@ -17,6 +17,11 @@ type Gallery interface {
 	// 이미지를 볼수 있는 페이지. 1페이지에 모두 있을때 가정
 	ReaderUrl() string
 
+	AllFeed() string
+	LangFeed(lang string) string
+	TagFeed(tag string) string
+	ArtistFeed(tag string) string
+
 	ReadLinks(html string) []string
 	ReadMetadata(html string) Metadata
 }
