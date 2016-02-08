@@ -122,7 +122,7 @@ func (f *HttpFetcher) Fetch(rawurl string) *FetchResult {
 	result := f.fetch(client, rawurl)
 
 	// 실패한 요청의 캐시는 저장할 필요 없다
-	if result.IsSuccess() {
+	if result.IsSuccess() && f.CacheRootPath != "" {
 		f.saveCacheFile(result)
 	}
 

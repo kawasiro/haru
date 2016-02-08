@@ -1,10 +1,10 @@
 package gallery
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/if1live/haru/network"
@@ -16,6 +16,18 @@ const CacheDirName = "_cache"
 const OutputDirName = "output/hitomi/"
 
 type Hitomi struct{}
+
+func (g Hitomi) LanguageListUrl(lang string, page int) string {
+	tokens := []string{
+		"https://hitomi.la/index-",
+		lang,
+		"-",
+		strconv.Itoa(page),
+		".html",
+	}
+	return strings.Join(tokens, "")
+
+}
 
 func (g Hitomi) replaceTemplatedUrl(tpl, key string) string {
 	const target = "{{.Key}}"
@@ -176,57 +188,22 @@ func (g Hitomi) ReadMetadata(html string) Metadata {
 	}
 }
 
-func (g Hitomi) getElementByClassName(n *html.Node, classname string) *html.Node {
-	for _, a := range n.Attr {
-		if a.Key == "class" {
-			classes := strings.Split(a.Val, " ")
-			for _, val := range classes {
-				if val == classname {
-					return n
-				}
-			}
-		}
-	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		found := g.getElementByClassName(c, classname)
-		if found != nil {
-			return found
-		}
-	}
-	return nil
-}
-
-func (g Hitomi) getElementsByTagName(n *html.Node, tag string) []*html.Node {
-	retval := []*html.Node{}
-	return g.getElementsByTagName_r(n, tag, retval)
-}
-
-func (g Hitomi) getElementsByTagName_r(n *html.Node, tag string, retval []*html.Node) []*html.Node {
-	if n.Type == html.ElementNode && n.Data == tag {
-		retval = append(retval, n)
-	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		retval = g.getElementsByTagName_r(c, tag, retval)
-	}
-	return retval
-}
-
 func (g Hitomi) readTitleNode(c *html.Node) string {
-	titleNode := g.getElementsByTagName(c, "h1")[0]
+	titleNode := GetElementsByTagName(c, "h1")[0]
 	title := titleNode.FirstChild.FirstChild.Data
 	return title
 }
 
 func (g Hitomi) readIdNode(c *html.Node) string {
-	titleNode := g.getElementsByTagName(c, "h1")[0]
+	titleNode := GetElementsByTagName(c, "h1")[0]
 	url := titleNode.FirstChild.Attr[0].Val
 	re := regexp.MustCompile(`/galleries/(.+).html`)
 	return re.FindStringSubmatch(url)[1]
 }
 
 func (g Hitomi) readCoverNode(c *html.Node) []string {
-	coverParentNode := g.getElementByClassName(c, "dj-img-cont")
-	coverNodes := g.getElementsByTagName(coverParentNode, "img")
+	coverParentNode := GetElementByClassName(c, "dj-img-cont")
+	coverNodes := GetElementsByTagName(coverParentNode, "img")
 	covers := []string{}
 	for _, c := range coverNodes {
 		cover := "https:" + c.Attr[0].Val
@@ -236,8 +213,8 @@ func (g Hitomi) readCoverNode(c *html.Node) []string {
 }
 
 func (g Hitomi) readArtistNode(c *html.Node) []string {
-	artistParentNode := g.getElementByClassName(c, "artist-list")
-	artistNodes := g.getElementsByTagName(artistParentNode, "a")
+	artistParentNode := GetElementByClassName(c, "artist-list")
+	artistNodes := GetElementsByTagName(artistParentNode, "a")
 	artists := []string{}
 	for _, c := range artistNodes {
 		artist := c.FirstChild.Data
@@ -247,8 +224,8 @@ func (g Hitomi) readArtistNode(c *html.Node) []string {
 }
 
 func (g Hitomi) readTagNode(c *html.Node) []string {
-	tagParentNode := g.getElementByClassName(c, "relatedtags")
-	tagNodes := g.getElementsByTagName(tagParentNode, "a")
+	tagParentNode := GetElementByClassName(c, "relatedtags")
+	tagNodes := GetElementsByTagName(tagParentNode, "a")
 	tags := []string{}
 	for _, c := range tagNodes {
 		tag := c.FirstChild.Data
@@ -259,7 +236,7 @@ func (g Hitomi) readTagNode(c *html.Node) []string {
 }
 
 func (g Hitomi) readDateNode(c *html.Node) string {
-	dateNode := g.getElementByClassName(c, "date")
+	dateNode := GetElementByClassName(c, "date")
 	date := dateNode.FirstChild.Data
 	return date
 }
@@ -271,8 +248,8 @@ func (g Hitomi) ReadEntryNode(n *html.Node) Metadata {
 	language := ""
 	series := []string{}
 
-	descNode := g.getElementByClassName(n, "dj-desc")
-	aTags := g.getElementsByTagName(descNode, "a")
+	descNode := GetElementByClassName(n, "dj-desc")
+	aTags := GetElementsByTagName(descNode, "a")
 	for _, c := range aTags {
 		if c.Attr[0].Key != "href" {
 			continue
@@ -317,7 +294,11 @@ func (g Hitomi) ReadList(htmlsrc string) []Metadata {
 		panic(err)
 	}
 
-	listNode := g.getElementByClassName(doc, "gallery-content")
+	listNode := GetElementByClassName(doc, "gallery-content")
+	if listNode == nil {
+		return entries
+	}
+
 	for c := listNode.FirstChild; c != nil; c = c.NextSibling {
 		// 개행 노드는 쓸모없다
 		if len(strings.Trim(c.Data, "\n")) == 0 {
@@ -326,7 +307,6 @@ func (g Hitomi) ReadList(htmlsrc string) []Metadata {
 		metadata := g.ReadEntryNode(c)
 		entries = append(entries, metadata)
 	}
-	fmt.Println(len(entries))
 	return entries
 }
 

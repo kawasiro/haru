@@ -18,6 +18,9 @@ type Gallery interface {
 	// 이미지를 볼수 있는 페이지. 1페이지에 모두 있을때 가정
 	ReaderUrl(id string) string
 
+	// 리스트 계열 함수
+	LanguageListUrl(lang string, page int) string
+
 	AllFeed() string
 	LangFeed(lang string) string
 	TagFeed(tag string) string

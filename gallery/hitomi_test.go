@@ -18,6 +18,10 @@ func TestUrls_Hitomi(t *testing.T) {
 		galleryUrl string
 		readerUrl  string
 
+		lang        string
+		page        int
+		langListUrl string
+
 		allFeed    string
 		langFeed   KeyUrlTuple
 		tagFeed    KeyUrlTuple
@@ -27,6 +31,10 @@ func TestUrls_Hitomi(t *testing.T) {
 			"854070",
 			"https://hitomi.la/galleries/854070.html",
 			"https://hitomi.la/reader/854070.html",
+
+			"korean",
+			123,
+			"https://hitomi.la/index-korean-123.html",
 
 			"https://hitomi.la/index-all.atom",
 			KeyUrlTuple{
@@ -134,6 +142,22 @@ func TestReadMetadata_Hitomi(t *testing.T) {
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("ReadMetadata - expected %q, got %q", expected, actual)
+	}
+}
+
+func TestReadList_Hitomi_NotListHtml(t *testing.T) {
+	cases := []struct {
+		file  string
+		count int
+	}{
+		{"hitomi/reader.html", 0},
+		{"hitomi/gallery.html", 5},
+	}
+	for _, c := range cases {
+		html := ReadTestHtml(c.file)
+		g := New(TypeHitomi)
+		actual := g.ReadList(html)
+		assert.Equal(t, len(actual), c.count)
 	}
 }
 

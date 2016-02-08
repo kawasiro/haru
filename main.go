@@ -5,9 +5,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/if1live/haru/gallery"
+	"github.com/if1live/haru/network"
 )
 
 func splitServerAndId(target string) (service, id string) {
@@ -75,13 +77,27 @@ func enqueueHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func listHandler(w http.ResponseWriter, r *http.Request) {
-	target := r.URL.Path[len("/enqueue/"):]
-	g, _ := createGallery(target)
+	target := r.URL.Path[len("/list/"):]
+	g, id := createGallery(target)
 	if g == nil {
 		fmt.Fprintf(w, "Unknown : %s", target)
 		return
 	}
 
+	page, err := strconv.Atoi(id)
+	if err != nil {
+		fmt.Fprintf(w, "Unknown Page : %s", id)
+		return
+	}
+
+	fetcher := network.NewFetcher(network.FetcherTypeHttp, "")
+	// TODO 언어는 어떻게 결정? GET params?
+	listUrl := g.LanguageListUrl("korean", page)
+	listHtml := fetcher.Fetch(listUrl).String()
+	entries := g.ReadList(listHtml)
+	fmt.Printf("%q\n", listUrl)
+
+	fmt.Fprintf(w, "%q", entries)
 }
 
 func mainSvr() {
