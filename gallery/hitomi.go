@@ -10,6 +10,9 @@ import (
 	"github.com/jhoonb/archivex"
 )
 
+const CacheDirName = "_cache"
+const OutputDirName = "output/hitomi/"
+
 type Hitomi struct {
 	Id string
 }
@@ -178,11 +181,13 @@ func fetchFileWithCh(f network.Fetcher, url string, fileName string, ch chan str
 	ch <- dstFilePath
 }
 
-func (g Hitomi) Download() string {
-	const CacheDirName = "_cache"
-	const OutputDirName = "output/hitomi/"
-	os.MkdirAll(OutputDirName, 0755)
+func (g Hitomi) Metadata() Metadata {
+	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
+	galleryHtml := fetcher.Fetch(g.GalleryUrl()).String()
+	return g.ReadMetadata(galleryHtml)
+}
 
+func (g Hitomi) Download() string {
 	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
 
 	// fetch gallery and extract metadata
@@ -201,6 +206,7 @@ func (g Hitomi) Download() string {
 		go fetchFileWithCh(fetcher, link, fileName, ch)
 	}
 
+	os.MkdirAll(OutputDirName, 0755)
 	zipFileName := OutputDirName + metadata.ZipFileName()
 
 	// make zip

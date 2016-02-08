@@ -27,6 +27,7 @@ type Gallery interface {
 	ReadMetadata(html string) Metadata
 
 	Download() string
+	Metadata() Metadata
 }
 
 type Metadata struct {
