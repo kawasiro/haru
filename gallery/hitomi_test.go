@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestUrls_HitomiGallery(t *testing.T) {
+func TestUrls_Hitomi(t *testing.T) {
 	type KeyUrlTuple struct {
 		key string
 		url string
@@ -65,7 +65,7 @@ func TestUrls_HitomiGallery(t *testing.T) {
 	}
 }
 
-func TestReadLinks_HitomiGallery(t *testing.T) {
+func TestReadLinks_Hitomi(t *testing.T) {
 	cases := []struct {
 		line  string
 		links []string
@@ -87,7 +87,7 @@ func TestReadLinks_HitomiGallery(t *testing.T) {
 	}
 }
 
-func TestReadLinks_HitomiGallery_Real(t *testing.T) {
+func TestReadLinks_Hitomi_Real(t *testing.T) {
 	html := ReadTestHtml("hitomi/reader.html")
 	g := New(TypeHitomi, "sample-id")
 	actual := g.ReadLinks(html)
@@ -112,7 +112,7 @@ func TestReadLinks_HitomiGallery_Real(t *testing.T) {
 	}
 }
 
-func TestReadMetadata_HitomiGallery(t *testing.T) {
+func TestReadMetadata_Hitomi(t *testing.T) {
 	html := ReadTestHtml("hitomi/gallery.html")
 	g := New(TypeHitomi, "sample-id")
 	actual := g.ReadMetadata(html)
