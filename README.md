@@ -3,7 +3,7 @@ comic crawler
 
 ## Install (for develop)
 
-``
+```bash
 go get github.com/Perlmint/goautoenv
 go get github.com/tools/godep
 
@@ -16,4 +16,4 @@ godep restore
 goautoenv link
 
 go test ./...
-``
+```
