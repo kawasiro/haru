@@ -33,5 +33,6 @@ _output
 Godeps/Readme
 Godeps/_workspace
 
-# autoenv
+# autoenv, goautoenv
 .env
+.goenv
