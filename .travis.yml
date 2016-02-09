@@ -10,5 +10,5 @@ script:
   - go test ./...
   - go build -v
 
-notification:
+notifications:
   email: false
