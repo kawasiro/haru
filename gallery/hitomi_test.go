@@ -18,9 +18,14 @@ func TestUrls_Hitomi(t *testing.T) {
 		galleryUrl string
 		readerUrl  string
 
-		lang        string
-		page        int
-		langListUrl string
+		lang          string
+		page          string
+		tag           string
+		artist        string
+		indexListUrl  string
+		langListUrl   string
+		tagListUrl    string
+		artistListUrl string
 
 		allFeed    string
 		langFeed   KeyUrlTuple
@@ -33,8 +38,14 @@ func TestUrls_Hitomi(t *testing.T) {
 			"https://hitomi.la/reader/854070.html",
 
 			"korean",
-			123,
+			"123",
+			"sample-tag",
+			"sample-artist",
+
+			"https://hitomi.la/index-all-123.html",
 			"https://hitomi.la/index-korean-123.html",
+			"https://hitomi.la/tag/sample-tag-all-123.html",
+			"https://hitomi.la/artist/sample-artist-all-123.html",
 
 			"https://hitomi.la/index-all.atom",
 			KeyUrlTuple{
@@ -43,7 +54,7 @@ func TestUrls_Hitomi(t *testing.T) {
 			},
 			KeyUrlTuple{
 				"female:stocking",
-				"https://hitomi.la/tag/female:stocking-all.atom",
+				"https://hitomi.la/tag/female%3Astocking-all.atom",
 			},
 			KeyUrlTuple{
 				"hiten onee-ryuu",
@@ -60,6 +71,12 @@ func TestUrls_Hitomi(t *testing.T) {
 		if g.ReaderUrl(c.id) != c.readerUrl {
 			t.Errorf("ReaderUrl - expected %q, got %q", c.readerUrl, g.ReaderUrl(c.id))
 		}
+
+		assert.Equal(t, g.ListUrl(ListParams{Page: c.page}), c.indexListUrl)
+		assert.Equal(t, g.ListUrl(ListParams{Page: c.page, Language: c.lang}), c.langListUrl)
+		assert.Equal(t, g.ListUrl(ListParams{Page: c.page, Tag: c.tag}), c.tagListUrl)
+		assert.Equal(t, g.ListUrl(ListParams{Page: c.page, Artist: c.artist}), c.artistListUrl)
+
 		if g.AllFeed() != c.allFeed {
 			t.Errorf("AllFeed - expected %q, got %q", c.allFeed, g.AllFeed())
 		}

@@ -3,6 +3,7 @@ package gallery
 import (
 	"bytes"
 	"encoding/json"
+	"strconv"
 	"strings"
 )
 
@@ -12,14 +13,31 @@ const (
 
 type GalleryType int32
 
+type ListParams struct {
+	Page     string
+	Language string
+	Tag      string
+	Artist   string
+}
+
+func (params *ListParams) PageNum() int {
+	page := 1
+	if len(params.Page) > 0 {
+		page, _ = strconv.Atoi(params.Page)
+	}
+	if page <= 0 {
+		page = 1
+	}
+	return page
+}
+
 type Gallery interface {
 	// 대표 페이지. 작가, 제목등의 추가 정보 획득가능
 	GalleryUrl(id string) string
 	// 이미지를 볼수 있는 페이지. 1페이지에 모두 있을때 가정
 	ReaderUrl(id string) string
 
-	// 리스트 계열 함수
-	LanguageListUrl(lang string, page int) string
+	ListUrl(params ListParams) string
 
 	AllFeed() string
 	LangFeed(lang string) string
@@ -32,6 +50,7 @@ type Gallery interface {
 
 	Download(id string) string
 	Metadata(id string) Metadata
+	ImageLinks(id string) []string
 }
 
 type Metadata struct {
@@ -48,6 +67,11 @@ type Metadata struct {
 	Characters []string `json:"characters"`
 	Tags       []string `json:"tags"`
 	Date       string   `json:"date"`
+}
+
+type Article struct {
+	Metadata   Metadata `json:"metadata"`
+	ImageLinks []string `json:"imageLinks"`
 }
 
 func (m *Metadata) ZipFileName() string {

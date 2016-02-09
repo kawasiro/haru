@@ -1,10 +1,10 @@
 package gallery
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/if1live/haru/network"
@@ -17,33 +17,37 @@ const OutputDirName = "output/hitomi/"
 
 type Hitomi struct{}
 
-func (g Hitomi) LanguageListUrl(lang string, page int) string {
-	tokens := []string{
-		"https://hitomi.la/index-",
-		lang,
-		"-",
-		strconv.Itoa(page),
-		".html",
-	}
-	return strings.Join(tokens, "")
-
+func (g Hitomi) sanitizeText(val string) string {
+	val = strings.Replace(val, " ", "%20", -1)
+	val = strings.Replace(val, ":", "%3A", -1)
+	return val
 }
 
-func (g Hitomi) replaceTemplatedUrl(tpl, key string) string {
-	const target = "{{.Key}}"
-	url := strings.Replace(tpl, target, key, -1)
-	url = strings.Replace(url, " ", "%20", -1)
-	return url
+func (g Hitomi) ListUrl(params ListParams) string {
+	language := params.Language
+	if len(language) == 0 {
+		language = "all"
+	}
+
+	if len(params.Tag) > 0 {
+		tpl := "https://hitomi.la/tag/%s-%s-%d.html"
+		tag := g.sanitizeText(params.Tag)
+		return fmt.Sprintf(tpl, tag, language, params.PageNum())
+	}
+	if len(params.Artist) > 0 {
+		tpl := "https://hitomi.la/artist/%s-%s-%d.html"
+		artist := g.sanitizeText(params.Artist)
+		return fmt.Sprintf(tpl, artist, language, params.PageNum())
+	}
+	return fmt.Sprintf("https://hitomi.la/index-%s-%d.html", language, params.PageNum())
 }
 
 func (g Hitomi) GalleryUrl(id string) string {
-	tpl := "https://hitomi.la/galleries/{{.Key}}.html"
-	return g.replaceTemplatedUrl(tpl, id)
+	return fmt.Sprintf("https://hitomi.la/galleries/%s.html", id)
 }
 
 func (g Hitomi) ReaderUrl(id string) string {
-	tpl := "https://hitomi.la/reader/{{.Key}}.html"
-	return g.replaceTemplatedUrl(tpl, id)
+	return fmt.Sprintf("https://hitomi.la/reader/%s.html", id)
 }
 
 func (g Hitomi) AllFeed() string {
@@ -51,18 +55,17 @@ func (g Hitomi) AllFeed() string {
 }
 
 func (g Hitomi) LangFeed(lang string) string {
-	tpl := "https://hitomi.la/index-{{.Key}}.atom"
-	return g.replaceTemplatedUrl(tpl, lang)
+	return fmt.Sprintf("https://hitomi.la/index-%s.atom", lang)
 }
 
 func (g Hitomi) TagFeed(tag string) string {
-	tpl := "https://hitomi.la/tag/{{.Key}}-all.atom"
-	return g.replaceTemplatedUrl(tpl, tag)
+	tag = g.sanitizeText(tag)
+	return fmt.Sprintf("https://hitomi.la/tag/%s-all.atom", tag)
 }
 
 func (g Hitomi) ArtistFeed(artist string) string {
-	tpl := "https://hitomi.la/artist/{{.Key}}-all.atom"
-	return g.replaceTemplatedUrl(tpl, artist)
+	artist = g.sanitizeText(artist)
+	return fmt.Sprintf("https://hitomi.la/artist/%s-all.atom", artist)
 }
 
 func (g Hitomi) ReadLinks(html string) []string {
@@ -190,7 +193,14 @@ func (g Hitomi) ReadMetadata(html string) Metadata {
 
 func (g Hitomi) readTitleNode(c *html.Node) string {
 	titleNode := GetElementsByTagName(c, "h1")[0]
-	title := titleNode.FirstChild.FirstChild.Data
+	aNode := GetElementsByTagName(titleNode, "a")[0]
+
+	// 제목이 등록되지 않은 예외 상황이 있더라
+	if aNode.FirstChild == nil {
+		return ""
+	}
+
+	title := aNode.FirstChild.Data
 	return title
 }
 
@@ -330,6 +340,13 @@ func (g Hitomi) Metadata(id string) Metadata {
 	return g.ReadMetadata(galleryHtml)
 }
 
+func (g Hitomi) ImageLinks(id string) []string {
+	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
+	readerHtml := fetcher.Fetch(g.ReaderUrl(id)).String()
+	links := g.ReadLinks(readerHtml)
+	return links
+}
+
 func (g Hitomi) Download(id string) string {
 	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
 
@@ -340,11 +357,8 @@ func (g Hitomi) Download(id string) string {
 		return ""
 	}
 
-	// fetch reader url
-	readerHtml := fetcher.Fetch(g.ReaderUrl(id)).String()
-	links := g.ReadLinks(readerHtml)
-
 	// download images
+	links := g.ImageLinks(id)
 	ch := make(chan string)
 	for _, link := range links {
 		fileName := network.ParseUrl(link).FileName

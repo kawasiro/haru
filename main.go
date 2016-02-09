@@ -1,14 +1,15 @@
 package main
 
 import (
-	"regexp"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
-	"encoding/json"
 
 	"github.com/if1live/haru/gallery"
 	"github.com/if1live/haru/network"
@@ -39,8 +40,20 @@ func downloadHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, 
 
 func detailHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, id string) {
 	w.Header().Set("Content-Type", "application/json")
-	metadata := g.Metadata(id)
-	w.Write(metadata.Marshal())
+
+	info := gallery.Article{
+		Metadata:   g.Metadata(id),
+		ImageLinks: g.ImageLinks(id),
+	}
+
+	data, err := json.Marshal(info)
+	if err != nil {
+		panic(err)
+	}
+
+	var out bytes.Buffer
+	json.Indent(&out, data, "", "  ")
+	w.Write(out.Bytes())
 }
 
 func enqueueHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, id string) {
@@ -54,9 +67,17 @@ func enqueueHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, i
 func listHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery) {
 	fetcher := network.NewHttpFetcher()
 
-	// TODO 언어는 어떻게 결정? GET params?
-	page := 1
-	listUrl := g.LanguageListUrl("korean", page)
+	// 페이지 정보는 항상 필요하다
+	params := gallery.ListParams{
+		Page:     r.URL.Query().Get("page"),
+		Language: r.URL.Query().Get("language"),
+		Tag:      r.URL.Query().Get("tag"),
+		Artist:   r.URL.Query().Get("artist"),
+	}
+
+	listUrl := g.ListUrl(params)
+	log.Printf("ListUrl: %s", listUrl)
+
 	listHtml := fetcher.Fetch(listUrl).String()
 	entries := g.ReadList(listHtml)
 
@@ -65,7 +86,7 @@ func listHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery) {
 		panic(err)
 	}
 
-
+	// 디버깅 쉬우려고 인덴트 넣었음. 필요없어지면 제거
 	var out bytes.Buffer
 	json.Indent(&out, data, "", "  ")
 	w.Write(out.Bytes())
