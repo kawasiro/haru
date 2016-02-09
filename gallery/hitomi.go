@@ -110,15 +110,32 @@ func (g Hitomi) readCover(html string) []string {
 	// Cover
 	// <div class="cover"><a href="/reader/405092.html"><img src="//tn.hitomi.la/bigtn/405092/001.jpg.jpg"></a></div>
 	coverRe := regexp.MustCompile(`<div class="cover"><a href=".+"><img src="(.+)"></a></div>`)
-	cover := "https:" + coverRe.FindStringSubmatch(html)[1]
+	m := coverRe.FindStringSubmatch(html)
+	if m == nil {
+		return []string{}
+	}
+
+	cover := "https:" + m[1]
 	return []string{cover}
 }
 
 func (g Hitomi) readTitle(html string) string {
 	// Title: h1 tags
 	// <h1><a href="/reader/405092.html">Sora no Omocha</a></h1>
-	titleRe := regexp.MustCompile(`<h1><a href="/reader/\d+.html">(.+)</a></h1>`)
-	return titleRe.FindStringSubmatch(html)[1]
+	galleryRe := regexp.MustCompile(`<h1><a href="/reader/\d+.html">(.+)</a></h1>`)
+	galleryMatch := galleryRe.FindStringSubmatch(html)
+	if galleryMatch != nil {
+		return galleryMatch[1]
+	}
+
+	readerRe := regexp.MustCompile(`<title>(.+)</title>`)
+	readerMatch := readerRe.FindStringSubmatch(html)
+	if readerMatch != nil {
+		title := readerMatch[1]
+		title = strings.Replace(title, " | Hitomi.la", "", -1)
+		return title
+	}
+	return ""
 }
 
 func (g Hitomi) readId(html string) string {
@@ -141,21 +158,34 @@ func (g Hitomi) readType(html string) string {
 	// <a href="/type/doujinshi-all-1.html">
 	// doujinshi
 	// </a></td>
-	typeRe := regexp.MustCompile(`<a href="/type/(.+)-all-1.html">`)
-	return typeRe.FindStringSubmatch(html)[1]
+	galleryRe := regexp.MustCompile(`<a href="/type/(.+)-all-1.html">`)
+	m := galleryRe.FindStringSubmatch(html)
+	if m == nil {
+		return ""
+	}
+
+	return m[1]
 }
 
 func (g Hitomi) readLanguage(html string) string {
 	// <td>Language</td><td><a href="/index-korean-1.html">korean</a></td>
 	langRe := regexp.MustCompile(`<td>Language</td><td><a href="/.+\.html">(.+)</a></td>`)
-	return langRe.FindStringSubmatch(html)[1]
+	m := langRe.FindStringSubmatch(html)
+	if m == nil {
+		return ""
+	}
+	return m[1]
 }
 
 func (g Hitomi) readDate(html string) string {
 	// Date
 	// <span class="date">2011-08-29 17:21:00-05</span>
 	dateRe := regexp.MustCompile(`<span class="date">(.+)</span>`)
-	return dateRe.FindStringSubmatch(html)[1]
+	m := dateRe.FindStringSubmatch(html)
+	if m == nil {
+		return ""
+	}
+	return m[1]
 }
 
 func (g Hitomi) extractUsefulHtml(html string) string {
@@ -175,6 +205,11 @@ func (g Hitomi) extractUsefulHtml(html string) string {
 
 func (g Hitomi) ReadMetadata(html string) Metadata {
 	html = g.extractUsefulHtml(html)
+
+	//id := g.readId(html)
+	//if id == "" {
+	//	return Metadata{}
+	//}
 
 	return Metadata{
 		Id:         g.readId(html),
@@ -337,7 +372,15 @@ func (g Hitomi) Metadata(id string) Metadata {
 	}
 
 	galleryHtml := result.String()
-	return g.ReadMetadata(galleryHtml)
+	metadata := g.ReadMetadata(galleryHtml)
+	if metadata.Id != "" {
+		return metadata
+	}
+
+	// fail-over
+	readerHtml := fetcher.Fetch(g.ReaderUrl(id)).String()
+	metadata = g.ReadMetadata(readerHtml)
+	return metadata
 }
 
 func (g Hitomi) ImageLinks(id string) []string {

@@ -140,25 +140,54 @@ func TestReadLinks_Hitomi_Real(t *testing.T) {
 }
 
 func TestReadMetadata_Hitomi(t *testing.T) {
-	html := ReadTestHtml("hitomi/gallery.html")
-	g := New(TypeHitomi)
-	actual := g.ReadMetadata(html)
-
-	expected := Metadata{
-		Id:         "405092",
-		Title:      "Sora no Omocha",
-		Covers:     []string{"https://tn.hitomi.la/bigtn/405092/001.jpg.jpg"},
-		Artists:    []string{"hiten onee-ryuu"},
-		Groups:     []string{"shadow sorceress communication protocol"},
-		Type:       "doujinshi",
-		Language:   "korean",
-		Series:     []string{"yosuga no sora"},
-		Characters: []string{"sora kasugano"},
-		Tags:       []string{"c78", "female:footjob", "female:loli", "female:sister", "female:stockings", "incest"},
-		Date:       "2011-08-29 17:21:00-05",
+	cases := []struct {
+		file     string
+		metadata Metadata
+	}{
+		{
+			"hitomi/gallery.html",
+			Metadata{
+				Id:         "405092",
+				Title:      "Sora no Omocha",
+				Covers:     []string{"https://tn.hitomi.la/bigtn/405092/001.jpg.jpg"},
+				Artists:    []string{"hiten onee-ryuu"},
+				Groups:     []string{"shadow sorceress communication protocol"},
+				Type:       "doujinshi",
+				Language:   "korean",
+				Series:     []string{"yosuga no sora"},
+				Characters: []string{"sora kasugano"},
+				Tags:       []string{"c78", "female:footjob", "female:loli", "female:sister", "female:stockings", "incest"},
+				Date:       "2011-08-29 17:21:00-05",
+			},
+		},
+		// 알수없는 이유로 gallery html에 접근하지 못하는경우
+		// reader라도 있으면 이것으로부터 메타데이터를 추정하자
+		{
+			"hitomi/reader.html",
+			Metadata{
+				Id:         "405092",
+				Title:      "Sora no Omocha",
+				Covers:     []string{},
+				Artists:    []string{},
+				Groups:     []string{},
+				Type:       "",
+				Language:   "",
+				Series:     []string{},
+				Characters: []string{},
+				Tags:       []string{},
+				Date:       "",
+			},
+		},
 	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Errorf("ReadMetadata - expected %q, got %q", expected, actual)
+
+	for _, c := range cases {
+		html := ReadTestHtml(c.file)
+		g := New(TypeHitomi)
+		actual := g.ReadMetadata(html)
+
+		if !reflect.DeepEqual(actual, c.metadata) {
+			t.Errorf("ReadMetadata - expected %q, got %q", c.metadata, actual)
+		}
 	}
 }
 

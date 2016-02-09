@@ -95,6 +95,7 @@ func (m *Metadata) ZipFileName() string {
 		{"&quot;", ""},
 		{".", ""},
 		{",", ""},
+		{"|", ""},
 	}
 
 	for _, tuple := range replaceTable {
