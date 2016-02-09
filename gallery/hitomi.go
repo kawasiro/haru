@@ -321,7 +321,12 @@ func fetchFileWithCh(f network.Fetcher, url string, fileName string, ch chan str
 
 func (g Hitomi) Metadata(id string) Metadata {
 	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
-	galleryHtml := fetcher.Fetch(g.GalleryUrl(id)).String()
+	result := fetcher.Fetch(g.GalleryUrl(id))
+	if !result.IsSuccess() {
+		return Metadata{}
+	}
+
+	galleryHtml := result.String()
 	return g.ReadMetadata(galleryHtml)
 }
 
@@ -330,6 +335,10 @@ func (g Hitomi) Download(id string) string {
 
 	// fetch gallery and extract metadata
 	metadata := g.Metadata(id)
+	if metadata.Id == "" {
+		// failed
+		return ""
+	}
 
 	// fetch reader url
 	readerHtml := fetcher.Fetch(g.ReaderUrl(id)).String()

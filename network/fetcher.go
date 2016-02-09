@@ -64,6 +64,10 @@ func (r *FetchResult) SaveToFile(dstFilePath string) {
 	output.Write(r.Data)
 }
 
+func NewHttpFetcher() Fetcher {
+	return NewFetcher(FetcherTypeHttp, "")
+}
+
 func NewDefaultFetcher() Fetcher {
 	return NewFetcher(FetcherTypeProxy, "_cache")
 }

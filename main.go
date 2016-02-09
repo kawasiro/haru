@@ -1,12 +1,14 @@
 package main
 
 import (
+	"regexp"
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
+	"encoding/json"
 
 	"github.com/if1live/haru/gallery"
 	"github.com/if1live/haru/network"
@@ -23,24 +25,7 @@ func splitServerAndId(target string) (service, id string) {
 	return
 }
 
-func createGallery(target string) (gallery.Gallery, string) {
-	service, id := splitServerAndId(target)
-	switch service {
-	case "hitomi":
-		return gallery.New(gallery.TypeHitomi), id
-	default:
-		// 기본값으로 때우기에는 id도 모를 확률이 높다
-		return nil, ""
-	}
-}
-
-func downloadHandler(w http.ResponseWriter, r *http.Request) {
-	target := r.URL.Path[len("/download/"):]
-	g, id := createGallery(target)
-	if g == nil {
-		fmt.Fprintf(w, "Unknown : %s", target)
-		return
-	}
+func downloadHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, id string) {
 	metadata := g.Metadata(id)
 	fileName := g.Download(id)
 
@@ -52,59 +37,100 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, file)
 }
 
-func detailHandler(w http.ResponseWriter, r *http.Request) {
-	target := r.URL.Path[len("/detail/"):]
-	g, id := createGallery(target)
-	if g == nil {
-		fmt.Fprintf(w, "Unknown : %s", target)
-		return
-	}
+func detailHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, id string) {
+	w.Header().Set("Content-Type", "application/json")
 	metadata := g.Metadata(id)
-	fmt.Fprintf(w, "%s", metadata.Marshal())
+	w.Write(metadata.Marshal())
 }
 
-func enqueueHandler(w http.ResponseWriter, r *http.Request) {
-	target := r.URL.Path[len("/enqueue/"):]
-	g, id := createGallery(target)
-	if g == nil {
-		fmt.Fprintf(w, "Unknown : %s", target)
-		return
-	}
+func enqueueHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, id string) {
+	w.Header().Set("Content-Type", "application/json")
 	metadata := g.Metadata(id)
 	fmt.Fprintf(w, "%s", metadata.Marshal())
 
 	// TODO work queue required
 }
 
-func listHandler(w http.ResponseWriter, r *http.Request) {
-	target := r.URL.Path[len("/list/"):]
-	g, id := createGallery(target)
-	if g == nil {
-		fmt.Fprintf(w, "Unknown : %s", target)
-		return
-	}
+func listHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery) {
+	fetcher := network.NewHttpFetcher()
 
-	page, err := strconv.Atoi(id)
-	if err != nil {
-		fmt.Fprintf(w, "Unknown Page : %s", id)
-		return
-	}
-
-	fetcher := network.NewFetcher(network.FetcherTypeHttp, "")
 	// TODO 언어는 어떻게 결정? GET params?
+	page := 1
 	listUrl := g.LanguageListUrl("korean", page)
 	listHtml := fetcher.Fetch(listUrl).String()
 	entries := g.ReadList(listHtml)
-	fmt.Printf("%q\n", listUrl)
 
-	fmt.Fprintf(w, "%q", entries)
+	data, err := json.Marshal(entries)
+	if err != nil {
+		panic(err)
+	}
+
+
+	var out bytes.Buffer
+	json.Indent(&out, data, "", "  ")
+	w.Write(out.Bytes())
+}
+
+var validMemberPathRe = regexp.MustCompile(`^/([a-z]+)/([a-zA-Z0-9]+)/([a-zA-Z0-9]+)$`)
+var validListPathRe = regexp.MustCompile(`^/([a-z]+)/([a-zA-Z0-9]+)/$`)
+
+func createGallery(service string) gallery.Gallery {
+	switch service {
+	case "hitomi":
+		return gallery.New(gallery.TypeHitomi)
+	default:
+		return nil
+	}
+}
+
+func makeListHandler(fn func(http.ResponseWriter, *http.Request, gallery.Gallery)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		m := validListPathRe.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		service := m[2]
+		g := createGallery(service)
+		if g == nil {
+			http.NotFound(w, r)
+			return
+		}
+		fn(w, r, g)
+	}
+}
+
+func makeMemberHandler(fn func(http.ResponseWriter, *http.Request, gallery.Gallery, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		m := validMemberPathRe.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		service := m[2]
+		id := m[3]
+
+		g := createGallery(service)
+		if g == nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		fn(w, r, g, id)
+	}
 }
 
 func mainSvr() {
-	http.HandleFunc("/download/", downloadHandler)
-	http.HandleFunc("/detail/", detailHandler)
-	http.HandleFunc("/enqueue/", enqueueHandler)
-	http.HandleFunc("/list/", listHandler)
+	http.HandleFunc("/download/", makeMemberHandler(downloadHandler))
+	http.HandleFunc("/detail/", makeMemberHandler(detailHandler))
+	http.HandleFunc("/enqueue/", makeMemberHandler(enqueueHandler))
+	http.HandleFunc("/list/", makeListHandler(listHandler))
 	http.ListenAndServe(":8080", nil)
 }
 
