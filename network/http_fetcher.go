@@ -97,7 +97,8 @@ func (f *HttpFetcher) Fetch(rawurl string) *FetchResult {
 	}
 
 	// http://stackoverflow.com/questions/16895294/how-to-set-timeout-for-http-get-requests-in-golang
-	const HttpTimeout = 3
+	// 타임아웃이 너무 짧으니 CDN이 느릴때 받다가 짤라버려서 이미지가 깨지더라
+	const HttpTimeout = 60
 	timeout := time.Duration(HttpTimeout * time.Second)
 
 	// http://stackoverflow.com/questions/12122159/golang-how-to-do-a-https-request-with-bad-certificate
