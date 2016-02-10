@@ -71,7 +71,7 @@ func (g Hitomi) ArtistFeed(artist string) string {
 func (g Hitomi) ReadLinks(html string) []string {
 	// hitomi html은 구조가 단순해서 굳이 정규식 안써도 된다
 	links := []string{}
-	re := regexp.MustCompile(`(//g.hitomi.la/galleries/\d+/\w+.jpg)`)
+	re := regexp.MustCompile(`(//g.hitomi.la/galleries/\d+/\w+.\w+)`)
 	for _, m := range re.FindAllStringSubmatch(html, -1) {
 		imageUrl := "https:" + m[1]
 		links = append(links, imageUrl)

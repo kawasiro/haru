@@ -7,12 +7,6 @@ import (
 	"strings"
 )
 
-const (
-	TypeHitomi = 1
-)
-
-type GalleryType int32
-
 type ListParams struct {
 	Page     string
 	Language string
@@ -117,11 +111,10 @@ func (m *Metadata) Marshal() []byte {
 	return out.Bytes()
 }
 
-func New(t GalleryType) Gallery {
-	if t == TypeHitomi {
+func New(t string) Gallery {
+	if t == "hitomi" {
 		return Hitomi{}
 	} else {
-		// default
-		return Hitomi{}
+		return nil
 	}
 }

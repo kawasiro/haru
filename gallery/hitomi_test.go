@@ -64,7 +64,7 @@ func TestUrls_Hitomi(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		g := New(TypeHitomi)
+		g := New("hitomi")
 		if g.GalleryUrl(c.id) != c.galleryUrl {
 			t.Errorf("GalleryUrl - expected %q, got %q", c.galleryUrl, g.GalleryUrl(c.id))
 		}
@@ -103,10 +103,18 @@ func TestReadLinks_Hitomi(t *testing.T) {
 			"<div class=\"img-url\">//g.hitomi.la/galleries/854070/1.jpg</div>",
 			[]string{"https://g.hitomi.la/galleries/854070/1.jpg"},
 		},
+		{
+			"<div class=\"img-url\">//g.hitomi.la/galleries/854070/1.png</div>",
+			[]string{"https://g.hitomi.la/galleries/854070/1.png"},
+		},
+		{
+			"<div class=\"img-url\">//g.hitomi.la/galleries/854070/1.jpeg</div>",
+			[]string{"https://g.hitomi.la/galleries/854070/1.jpeg"},
+		},
 	}
 
 	for _, c := range cases {
-		g := New(TypeHitomi)
+		g := New("hitomi")
 		got := g.ReadLinks(c.line)
 		if !reflect.DeepEqual(got, c.links) {
 			t.Errorf("ReadLinks - expected %q, got %q", c.links, got)
@@ -116,7 +124,7 @@ func TestReadLinks_Hitomi(t *testing.T) {
 
 func TestReadLinks_Hitomi_Real(t *testing.T) {
 	html := ReadTestHtml("hitomi/reader.html")
-	g := New(TypeHitomi)
+	g := New("hitomi")
 	actual := g.ReadLinks(html)
 	expectedUrls := []string{
 		"https://g.hitomi.la/galleries/405092/001.jpg",
@@ -182,7 +190,7 @@ func TestReadMetadata_Hitomi(t *testing.T) {
 
 	for _, c := range cases {
 		html := ReadTestHtml(c.file)
-		g := New(TypeHitomi)
+		g := New("hitomi")
 		actual := g.ReadMetadata(html)
 
 		if !reflect.DeepEqual(actual, c.metadata) {
@@ -201,7 +209,7 @@ func TestReadList_Hitomi_NotListHtml(t *testing.T) {
 	}
 	for _, c := range cases {
 		html := ReadTestHtml(c.file)
-		g := New(TypeHitomi)
+		g := New("hitomi")
 		actual := g.ReadList(html)
 		assert.Equal(t, len(actual), c.count)
 	}
@@ -209,7 +217,7 @@ func TestReadList_Hitomi_NotListHtml(t *testing.T) {
 
 func TestReadList_Hitomi(t *testing.T) {
 	html := ReadTestHtml("hitomi/list.html")
-	g := New(TypeHitomi)
+	g := New("hitomi")
 	actual := g.ReadList(html)
 
 	assert.Equal(t, len(actual), 25)
