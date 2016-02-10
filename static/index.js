@@ -185,9 +185,12 @@ var GalleryListParams = React.createClass({
 });
 
 var GalleryCover = React.createClass({
+  url: function() {
+    return "/api/proxy/?url=" + this.props.url;
+  },
   render: function() {
     return (
-      <img src={this.props.url}/>
+      <img src={this.url()}/>
     )
   }
 });

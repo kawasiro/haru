@@ -56,6 +56,20 @@ func enqueueHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, i
 	// TODO work queue required
 }
 
+func proxyHandler(w http.ResponseWriter, r *http.Request) {
+	u := r.URL.Query().Get("url")
+	fetcher := network.NewDefaultFetcher()
+	result := fetcher.Fetch(u)
+
+	// 간단한 에러처리로 충분할거다
+	if !result.IsSuccess() {
+		http.NotFound(w, r)
+		return
+	}
+	log.Printf("proxy: %s", u)
+	io.Copy(w, bytes.NewReader(result.Data))
+}
+
 func listHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery) {
 	fetcher := network.NewHttpFetcher()
 	//개발단계에서는 캐시붙은거 써도 상관없다
@@ -137,6 +151,8 @@ func mainSvr() {
 	http.HandleFunc("/api/detail/", makeMemberHandler(detailHandler))
 	http.HandleFunc("/api/enqueue/", makeMemberHandler(enqueueHandler))
 	http.HandleFunc("/api/list/", makeCollectionHandler(listHandler))
+
+	http.HandleFunc("/api/proxy/", proxyHandler)
 
 	// from react-tutorial server.go
 	http.Handle("/", http.FileServer(http.Dir("./static")))
