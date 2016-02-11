@@ -3,6 +3,7 @@ package network
 import (
 	"compress/gzip"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 )
@@ -81,11 +82,15 @@ func (f *CacheFileFetcher) fetchNormalCache(rawurl, filepath string) *FetchResul
 func (f *CacheFileFetcher) Fetch(rawurl string) *FetchResult {
 	filepath := f.CacheFilePathIfExist(rawurl)
 	if strings.HasSuffix(filepath, ".gz") {
+		log.Printf("CacheFileFetcher: %s -> use compress\n", rawurl)
 		return f.fetchCompressedCache(rawurl, filepath)
+
 	} else if filepath != "" {
+		log.Printf("CacheFileFetcher: %s -> use normal\n", rawurl)
 		return f.fetchNormalCache(rawurl, filepath)
+
 	} else {
-		// cache not found
+		log.Printf("CacheFileFetcher: %s -> cache not found\n", rawurl)
 		return NewErrorResult(rawurl, FetchCodeErrorCacheNotExist)
 	}
 }

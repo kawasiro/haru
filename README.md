@@ -32,8 +32,11 @@ goautoenv link
 # compile
 go build
 
-# download id=405092 from hitomi.la 
-ID=405092 ./haru
+# download id=405092 from hitomi.la
+./haru -id=405092 -service=hitomi -cmd=download
+
+# help
+./haru -h
 ```
 
 Use enviromnent variable(key=ID) to pass target id.
@@ -73,7 +76,7 @@ example
 | Query String | page | page number. 1~xxx | 2 (default=1) |
 | Query String | language | Language | korean |
 | Query String | tag | tag name | female:stockings |
-| Query String | artist | artist name  | hiten%20onee-ryuu | 
+| Query String | artist | artist name  | hiten%20onee-ryuu |
 
 Note
 * Cannot use tag and artist at same time.

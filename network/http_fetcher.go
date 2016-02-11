@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -97,24 +98,19 @@ func (f *HttpFetcher) Fetch(rawurl string) *FetchResult {
 	}
 
 	// http://stackoverflow.com/questions/16895294/how-to-set-timeout-for-http-get-requests-in-golang
-	// 타임아웃이 너무 짧으니 CDN이 느릴때 받다가 짤라버려서 이미지가 깨지더라
-	const HttpTimeout = 60
-	timeout := time.Duration(HttpTimeout * time.Second)
+	// 오래 걸리는 작업은 워커로 넘길거니까 타임아웃을 굳이 설정할 필요는 없을듯
 
 	// http://stackoverflow.com/questions/12122159/golang-how-to-do-a-https-request-with-bad-certificate
 	client := &http.Client{}
 	switch u.Scheme {
 	case "http":
-		client = &http.Client{
-			Timeout: timeout,
-		}
+		client = &http.Client{}
 	case "https":
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		client = &http.Client{
 			Transport: tr,
-			Timeout:   timeout,
 		}
 	default:
 		// 없으면 http로 취급
@@ -127,5 +123,10 @@ func (f *HttpFetcher) Fetch(rawurl string) *FetchResult {
 		f.saveCacheFile(result)
 	}
 
+	if result.IsSuccess() {
+		log.Printf("HttpFetcher: %s -> success\n", rawurl)
+	} else {
+		log.Printf("HttpFetcher: %s -> fail\n", rawurl)
+	}
 	return result
 }

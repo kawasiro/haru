@@ -116,3 +116,19 @@ func (f *ProxyFetcher) Fetch(rawurl string) *FetchResult {
 	httpFetcher := HttpFetcher{f.CacheRootPath}
 	return httpFetcher.Fetch(rawurl)
 }
+
+func multipleFetchCh(f Fetcher, url string, ch chan *FetchResult) {
+	ch <- f.Fetch(url)
+}
+
+func MultipleFetch(f Fetcher, urls []string) []*FetchResult {
+	ch := make(chan *FetchResult)
+	for _, url := range urls {
+		go multipleFetchCh(f, url, ch)
+	}
+	results := []*FetchResult{}
+	for i := 0; i < len(urls); i++ {
+		results = append(results, <-ch)
+	}
+	return results
+}

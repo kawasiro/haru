@@ -12,7 +12,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-const CacheDirName = "_cache"
 const OutputDirName = "output/hitomi/"
 
 type Hitomi struct{}
@@ -360,15 +359,13 @@ func (g Hitomi) ReadList(htmlsrc string) []Metadata {
 
 func fetchFileWithCh(f network.Fetcher, url string, fileName string, ch chan string) {
 	result := f.Fetch(url)
-	log.Printf("%s success\n", result.Url)
-
 	dstFilePath := fileName
 	result.SaveToFile(dstFilePath)
 	ch <- dstFilePath
 }
 
 func (g Hitomi) Metadata(id string) Metadata {
-	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
+	fetcher := network.NewDefaultFetcher()
 	result := fetcher.Fetch(g.GalleryUrl(id))
 	if !result.IsSuccess() {
 		return Metadata{}
@@ -387,14 +384,14 @@ func (g Hitomi) Metadata(id string) Metadata {
 }
 
 func (g Hitomi) ImageLinks(id string) []string {
-	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
+	fetcher := network.NewDefaultFetcher()
 	readerHtml := fetcher.Fetch(g.ReaderUrl(id)).String()
 	links := g.ReadLinks(readerHtml)
 	return links
 }
 
 func (g Hitomi) Download(id string) string {
-	fetcher := network.NewFetcher(network.FetcherTypeProxy, CacheDirName)
+	fetcher := network.NewDefaultFetcher()
 
 	// fetch gallery and extract metadata
 	metadata := g.Metadata(id)
@@ -428,4 +425,20 @@ func (g Hitomi) Download(id string) string {
 	log.Printf("%s success\n", zipFileName)
 
 	return zipFileName
+}
+
+func (g Hitomi) PrefetchCover(id string) []string {
+	fetcher := network.NewDefaultFetcher()
+	metadata := g.Metadata(id)
+	covers := metadata.Covers
+	network.MultipleFetch(fetcher, covers)
+	return covers
+}
+
+func (g Hitomi) PrefetchImage(id string) []string {
+	fetcher := network.NewDefaultFetcher()
+	links := g.ImageLinks(id)
+
+	network.MultipleFetch(fetcher, links)
+	return links
 }

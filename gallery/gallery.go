@@ -45,6 +45,9 @@ type Gallery interface {
 	Download(id string) string
 	Metadata(id string) Metadata
 	ImageLinks(id string) []string
+
+	PrefetchCover(id string) []string
+	PrefetchImage(id string) []string
 }
 
 type Metadata struct {
