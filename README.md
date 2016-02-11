@@ -1,4 +1,7 @@
 # Haru
+
+[![Build Status](https://travis-ci.org/if1live/haru.svg?branch=master)](https://travis-ci.org/if1live/haru)
+
 Comic crawler
 
 ## Feature
@@ -65,7 +68,7 @@ Connect to http://127.0.0.1:3000
 ## API
 ### Gallery List
 
-GET /api/list/<service>/
+GET /api/list/{service}/
 
 example
 * http://127.0.0.1:3000/api/list/hitomi/?page=2&tag=female:stockings&language=korean
@@ -83,7 +86,7 @@ Note
 * Cannot use tag and artist at same time.
 
 ### Gallery Information
-GET /api/detail/<service>/<id>
+GET /api/detail/{service}/<id>
 
 example
 * http://127.0.0.1:3000/api/detail/hitomi/405092
@@ -94,7 +97,7 @@ example
 | URL  | id | gallery id | 405092 |
 
 ### Download Gallery
-GET /api/download/<service>/<id>
+GET /api/download/{service}/{id}
 
 example
 * http://127.0.0.1:3000/api/download/hitomi/405092
