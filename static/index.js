@@ -110,7 +110,8 @@ var GalleryBox = React.createClass({
   getInitialState: function() {
     return {
       metadata: {},
-      imageLinks: []
+      imageLinks: [],
+      cached: false,
     }
   },
   getId: function() {
@@ -122,6 +123,9 @@ var GalleryBox = React.createClass({
   },
   getDownloadUrl: function() {
     return '/api/download/hitomi/' + this.getId();
+  },
+  getEnqueueUrl: function() {
+    return '/api/enqueue/hitomi/' + this.getId();
   },
   getReaderUrl: function() {
     return `https://hitomi.la/reader/${this.getId()}.html`
@@ -148,8 +152,14 @@ var GalleryBox = React.createClass({
     return (
       <div className="galleryBox">
       <GalleryEntry entry={this.state.metadata} onCategoryChange={null}/>
+      <div>
       <a className="btn btn-default" href={this.getDownloadUrl()}>Download</a>
       <a className="btn btn-default" href={this.getReaderUrl()}>Read</a>
+      <br/>
+      <a className="btn btn-default" target="_blank" href={this.getEnqueueUrl()}>
+      Enqueue - Cached: {this.state.cached.toString()}
+      </a>
+      </div>
       </div>
     )
   }

@@ -83,6 +83,7 @@ func detailHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, id
 		Metadata:   g.Metadata(id),
 		ImageLinks: g.ImageLinks(id),
 	}
+	info.Cached = info.IsCached()
 
 	data, err := json.Marshal(info)
 	if err != nil {

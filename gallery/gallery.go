@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+
+	"github.com/if1live/haru/network"
 )
 
 type ListParams struct {
@@ -69,6 +71,17 @@ type Metadata struct {
 type Article struct {
 	Metadata   Metadata `json:"metadata"`
 	ImageLinks []string `json:"imageLinks"`
+	Cached     bool     `json:"cached"`
+}
+
+func (a Article) IsCached() bool {
+	f := network.NewCacheFetcher()
+	for _, url := range a.ImageLinks {
+		if f.CacheExist(url) == false {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *Metadata) ZipFileName() string {
