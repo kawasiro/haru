@@ -5,6 +5,7 @@ Comic crawler
 * Hitomi.la
   * Download
   * Browsing
+  * Enqueue download task
   * API to fetch information
 
 ## Install
@@ -100,6 +101,19 @@ example
 
 Note
 * parameters are same with gallery information API.
+
+### Enqueue download task
+GET /api/enqueue/<service>/<id>
+
+example
+* 127.0.0.1:3000/api/enqueue/hitomi/405092
+
+If you enqueue task, haru download cover images and gallery images.
+You can download zip after work is completed.
+
+Note
+* parameters are same with gallery information API.
+
 
 ## Unit test
 
