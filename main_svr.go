@@ -66,12 +66,22 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 func downloadHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery, id string) {
 	metadata := g.Metadata(id)
-	fileName := g.Download(id)
 
 	// http://stackoverflow.com/questions/24116147/golang-how-to-download-file-in-browser-from-golang-server
 	w.Header().Set("Content-Disposition", "attachment; filename="+metadata.ZipFileName())
 	w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
 
+	// 미리 zip으로 받아둔게 있으면 그것을 쓴다
+	// 이미지만 미리 캐싱해두고 zip은 즉시 생성하도록 설계하면
+	// 라즈베리파이가 못버틴다
+	zipFileName := gallery.OutputDirName + metadata.ZipFileName()
+	prevFile, err := os.Open(zipFileName)
+	if err == nil {
+		io.Copy(w, prevFile)
+		return
+	}
+
+	fileName := g.Download(id)
 	file, _ := os.Open(fileName)
 	io.Copy(w, file)
 }

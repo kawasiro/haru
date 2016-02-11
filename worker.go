@@ -19,6 +19,7 @@ func (w WorkRequest) Run() {
 	g := gallery.New(w.Service)
 	g.PrefetchCover(w.Id)
 	g.PrefetchImage(w.Id)
+	g.Download(w.Id)
 }
 
 var WorkQueue = make(chan WorkRequest, 100)
