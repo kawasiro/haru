@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -18,7 +19,7 @@ type HttpFetcher struct {
 	CacheRootPath string
 }
 
-func (f *HttpFetcher) saveCacheFile(result *FetchResult) {
+func (f *HttpFetcher) saveCompressedCacheFile(result *FetchResult) {
 	// Save to cache
 	seg := ParseUrl(result.Url)
 
@@ -40,6 +41,23 @@ func (f *HttpFetcher) saveCacheFile(result *FetchResult) {
 		panic(err)
 	}
 	file.Write(b.Bytes())
+	file.Close()
+}
+
+func (f *HttpFetcher) saveNormalCacheFile(result *FetchResult) {
+	// Save to cache
+	seg := ParseUrl(result.Url)
+
+	cacheDir := seg.ToCacheDir(f.CacheRootPath)
+	os.MkdirAll(cacheDir, 0755)
+
+	// write file
+	cacheFile := seg.ToCacheFilePath(f.CacheRootPath)
+	file, err := os.OpenFile(cacheFile, os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		panic(err)
+	}
+	file.Write(result.Data)
 	file.Close()
 }
 
@@ -120,7 +138,12 @@ func (f *HttpFetcher) Fetch(rawurl string) *FetchResult {
 
 	// 실패한 요청의 캐시는 저장할 필요 없다
 	if result.IsSuccess() && f.CacheRootPath != "" {
-		f.saveCacheFile(result)
+		// 이미지 파일은 이미 압축된 상태일테니 또 압축할 필요없다
+		if strings.HasSuffix(result.Url, ".jpg") || strings.HasSuffix(result.Url, ".png") {
+			f.saveNormalCacheFile(result)
+		} else {
+			f.saveCompressedCacheFile(result)
+		}
 	}
 
 	if result.IsSuccess() {
