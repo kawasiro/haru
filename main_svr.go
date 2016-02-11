@@ -79,8 +79,8 @@ func listHandler(w http.ResponseWriter, r *http.Request, g gallery.Gallery) {
 	params := gallery.ListParams{
 		Page:     r.URL.Query().Get("page"),
 		Language: r.URL.Query().Get("language"),
-		Tag:      r.URL.Query().Get("tag"),
-		Artist:   r.URL.Query().Get("artist"),
+		Category: r.URL.Query().Get("category"),
+		Value:    r.URL.Query().Get("value"),
 	}
 
 	listUrl := g.ListUrl(params)

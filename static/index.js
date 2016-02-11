@@ -11,23 +11,10 @@ var GalleryEntryList = React.createClass({
       }
     };
   },
-  getRequestData: function() {
-    var data = {
-      page: this.state.opts.page,
-      language: this.state.opts.language
-    };
-    if(this.state.opts.category == "artist") {
-      data.artist = this.state.opts.value;
-    }
-    if(this.state.opts.category == "tag") {
-      data.tag = this.state.opts.value;
-    }
-    return data;
-  },
   loadEntriesFromServer: function() {
     $.ajax({
       url: this.props.url,
-      data: this.getRequestData(),
+      data: this.state.opts,
       dataType: 'json',
       cache: false,
       success: function(data) {

@@ -2,17 +2,16 @@ package network
 
 import (
 	"bytes"
-	"compress/gzip"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
 )
 
 const (
-	FetchCodeSuccessHttp        = 1
-	FetchCodeSuccessUseCompress = 2
-	FetchCodeSuccessUseCache    = 3
+	// http code와 값을 공유하려고 2xx 코드에 겹침
+	FetchCodeSuccessHttp        = 299
+	FetchCodeSuccessUseCompress = 298
+	FetchCodeSuccessUseCache    = 297
 
 	// custom error code
 	FetchCodeErrorCacheNotExist  = 1001
@@ -46,7 +45,7 @@ type FetchResult struct {
 }
 
 func (r *FetchResult) IsSuccess() bool {
-	return r.Code < 100
+	return 200 <= r.Code && r.Code < 300
 }
 
 func (r *FetchResult) String() string {
@@ -64,12 +63,17 @@ func (r *FetchResult) SaveToFile(dstFilePath string) {
 	output.Write(r.Data)
 }
 
+const defaultCacheRootPath = "_cache"
+
 func NewHttpFetcher() Fetcher {
 	return NewFetcher(FetcherTypeHttp, "")
 }
 
 func NewDefaultFetcher() Fetcher {
-	return NewFetcher(FetcherTypeProxy, "_cache")
+	return NewFetcher(FetcherTypeProxy, defaultCacheRootPath)
+}
+func NewCacheFetcher() CacheFileFetcher {
+	return CacheFileFetcher{defaultCacheRootPath}
 }
 
 func NewFetcher(fetcherType FetcherType, cacheRootPath string) Fetcher {
@@ -94,61 +98,12 @@ func NewErrorResult(rawurl string, code FetchCode) *FetchResult {
 	}
 }
 
-type CacheFileFetcher struct {
-	CacheRootPath string
-}
 type ProxyFetcher struct {
 	CacheRootPath string
 }
 
 func (r *FetchResult) Size() int64 {
 	return int64(len(r.Data))
-}
-
-func (f *CacheFileFetcher) Fetch(rawurl string) *FetchResult {
-	seg := ParseUrl(rawurl)
-	cachePath := seg.ToCacheFilePath(f.CacheRootPath)
-
-	// gzip 압축된것이 있는지 확인
-	compressedCachePath := cachePath + ".gz"
-	compressedFile, err := os.Open(compressedCachePath)
-	if err == nil {
-		// decompress
-		archive, err := gzip.NewReader(compressedFile)
-		if err != nil {
-			panic(err)
-		}
-		defer archive.Close()
-
-		data, err := ioutil.ReadAll(archive)
-		if err != nil {
-			panic(err)
-		}
-		return &FetchResult{
-			Url:  rawurl,
-			Data: data,
-			Date: archive.Header.ModTime,
-			Code: FetchCodeSuccessUseCompress,
-		}
-	}
-
-	file, err := os.Open(cachePath)
-	if err != nil {
-		// 에러에 따라서 분기
-		return NewErrorResult(rawurl, FetchCodeErrorCacheNotExist)
-	}
-
-	// normal state
-	fileInfo, _ := file.Stat()
-	data := make([]byte, fileInfo.Size())
-	file.Read(data)
-
-	return &FetchResult{
-		Url:  rawurl,
-		Data: data,
-		Date: fileInfo.ModTime(),
-		Code: FetchCodeSuccessUseCache,
-	}
 }
 
 func (f *ProxyFetcher) Fetch(rawurl string) *FetchResult {

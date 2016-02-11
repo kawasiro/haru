@@ -10,8 +10,8 @@ import (
 type ListParams struct {
 	Page     string
 	Language string
-	Tag      string
-	Artist   string
+	Category string
+	Value    string
 }
 
 func (params *ListParams) PageNum() int {

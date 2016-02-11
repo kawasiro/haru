@@ -74,8 +74,12 @@ func TestUrls_Hitomi(t *testing.T) {
 
 		assert.Equal(t, g.ListUrl(ListParams{Page: c.page}), c.indexListUrl)
 		assert.Equal(t, g.ListUrl(ListParams{Page: c.page, Language: c.lang}), c.langListUrl)
-		assert.Equal(t, g.ListUrl(ListParams{Page: c.page, Tag: c.tag}), c.tagListUrl)
-		assert.Equal(t, g.ListUrl(ListParams{Page: c.page, Artist: c.artist}), c.artistListUrl)
+		assert.Equal(t, g.ListUrl(ListParams{
+			Page: c.page, Category: "tag", Value: c.tag,
+		}), c.tagListUrl)
+		assert.Equal(t, g.ListUrl(ListParams{
+			Page: c.page, Category: "artist", Value: c.artist,
+		}), c.artistListUrl)
 
 		if g.AllFeed() != c.allFeed {
 			t.Errorf("AllFeed - expected %q, got %q", c.allFeed, g.AllFeed())

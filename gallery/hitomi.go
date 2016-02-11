@@ -17,29 +17,20 @@ const OutputDirName = "output/hitomi/"
 
 type Hitomi struct{}
 
-func (g Hitomi) sanitizeText(val string) string {
-	val = strings.Replace(val, " ", "%20", -1)
-	val = strings.Replace(val, ":", "%3A", -1)
-	return val
-}
-
 func (g Hitomi) ListUrl(params ListParams) string {
 	language := params.Language
 	if len(language) == 0 {
 		language = "all"
 	}
 
-	if len(params.Tag) > 0 {
-		tpl := "https://hitomi.la/tag/%s-%s-%d.html"
-		tag := g.sanitizeText(params.Tag)
-		return fmt.Sprintf(tpl, tag, language, params.PageNum())
+	page := params.PageNum()
+	if params.Category != "" {
+		tpl := "https://hitomi.la/%s/%s-%s-%d.html"
+		value := UrlEncode(params.Value)
+		return fmt.Sprintf(tpl, params.Category, value, language, page)
 	}
-	if len(params.Artist) > 0 {
-		tpl := "https://hitomi.la/artist/%s-%s-%d.html"
-		artist := g.sanitizeText(params.Artist)
-		return fmt.Sprintf(tpl, artist, language, params.PageNum())
-	}
-	return fmt.Sprintf("https://hitomi.la/index-%s-%d.html", language, params.PageNum())
+
+	return fmt.Sprintf("https://hitomi.la/index-%s-%d.html", language, page)
 }
 
 func (g Hitomi) GalleryUrl(id string) string {
@@ -59,12 +50,12 @@ func (g Hitomi) LangFeed(lang string) string {
 }
 
 func (g Hitomi) TagFeed(tag string) string {
-	tag = g.sanitizeText(tag)
+	tag = UrlEncode(tag)
 	return fmt.Sprintf("https://hitomi.la/tag/%s-all.atom", tag)
 }
 
 func (g Hitomi) ArtistFeed(artist string) string {
-	artist = g.sanitizeText(artist)
+	artist = UrlEncode(artist)
 	return fmt.Sprintf("https://hitomi.la/artist/%s-all.atom", artist)
 }
 
@@ -106,10 +97,10 @@ func (g Hitomi) sanitizeTag(tag string) string {
 	return tag
 }
 
+// <div class="cover"><a href="/reader/405092.html"><img src="//tn.hitomi.la/bigtn/405092/001.jpg.jpg"></a></div>
+var coverRe = regexp.MustCompile(`<div class="cover"><a href=".+"><img src="(.+)"></a></div>`)
+
 func (g Hitomi) readCover(html string) []string {
-	// Cover
-	// <div class="cover"><a href="/reader/405092.html"><img src="//tn.hitomi.la/bigtn/405092/001.jpg.jpg"></a></div>
-	coverRe := regexp.MustCompile(`<div class="cover"><a href=".+"><img src="(.+)"></a></div>`)
 	m := coverRe.FindStringSubmatch(html)
 	if m == nil {
 		return []string{}
@@ -119,17 +110,17 @@ func (g Hitomi) readCover(html string) []string {
 	return []string{cover}
 }
 
+// <h1><a href="/reader/405092.html">Sora no Omocha</a></h1>
+var titleGalleryRe = regexp.MustCompile(`<h1><a href="/reader/\d+.html">(.+)</a></h1>`)
+var titleReaderRe = regexp.MustCompile(`<title>(.+)</title>`)
+
 func (g Hitomi) readTitle(html string) string {
-	// Title: h1 tags
-	// <h1><a href="/reader/405092.html">Sora no Omocha</a></h1>
-	galleryRe := regexp.MustCompile(`<h1><a href="/reader/\d+.html">(.+)</a></h1>`)
-	galleryMatch := galleryRe.FindStringSubmatch(html)
+	galleryMatch := titleGalleryRe.FindStringSubmatch(html)
 	if galleryMatch != nil {
 		return galleryMatch[1]
 	}
 
-	readerRe := regexp.MustCompile(`<title>(.+)</title>`)
-	readerMatch := readerRe.FindStringSubmatch(html)
+	readerMatch := titleReaderRe.FindStringSubmatch(html)
 	if readerMatch != nil {
 		title := readerMatch[1]
 		title = strings.Replace(title, " | Hitomi.la", "", -1)
@@ -138,50 +129,52 @@ func (g Hitomi) readTitle(html string) string {
 	return ""
 }
 
+var idGalleryRe = regexp.MustCompile(`<a href="/reader/(.+).html"><h1>Read Online</h1></a>`)
+var idReaderRe = regexp.MustCompile(`<a class="brand" href="/galleries/(.+).html">Gallery Info</a>`)
+
 func (g Hitomi) readId(html string) string {
-	galleryRe := regexp.MustCompile(`<a href="/reader/(.+).html"><h1>Read Online</h1></a>`)
-	galleryMatch := galleryRe.FindStringSubmatch(html)
+	galleryMatch := idGalleryRe.FindStringSubmatch(html)
 	if len(galleryMatch) > 0 {
 		return galleryMatch[1]
 	}
 
-	readerRe := regexp.MustCompile(`<a class="brand" href="/galleries/(.+).html">Gallery Info</a>`)
-	readerMatch := readerRe.FindStringSubmatch(html)
+	readerMatch := idReaderRe.FindStringSubmatch(html)
 	if len(readerMatch) > 0 {
 		return readerMatch[1]
 	}
 	return ""
 }
 
+// Type: url = /type/ 에서 유도
+// <a href="/type/doujinshi-all-1.html">
+// doujinshi
+// </a></td>
+var typeGalleryRe = regexp.MustCompile(`<a href="/type/(.+)-all-1.html">`)
+
 func (g Hitomi) readType(html string) string {
-	// Type: url = /type/ 에서 유도
-	// <a href="/type/doujinshi-all-1.html">
-	// doujinshi
-	// </a></td>
-	galleryRe := regexp.MustCompile(`<a href="/type/(.+)-all-1.html">`)
-	m := galleryRe.FindStringSubmatch(html)
+	m := typeGalleryRe.FindStringSubmatch(html)
 	if m == nil {
 		return ""
 	}
-
 	return m[1]
 }
+
+// <td>Language</td><td><a href="/index-korean-1.html">korean</a></td>
+var languageGalleryRe = regexp.MustCompile(`<td>Language</td><td><a href="/.+\.html">(.+)</a></td>`)
 
 func (g Hitomi) readLanguage(html string) string {
-	// <td>Language</td><td><a href="/index-korean-1.html">korean</a></td>
-	langRe := regexp.MustCompile(`<td>Language</td><td><a href="/.+\.html">(.+)</a></td>`)
-	m := langRe.FindStringSubmatch(html)
+	m := languageGalleryRe.FindStringSubmatch(html)
 	if m == nil {
 		return ""
 	}
 	return m[1]
 }
 
+// <span class="date">2011-08-29 17:21:00-05</span>
+var dateGalleryRe = regexp.MustCompile(`<span class="date">(.+)</span>`)
+
 func (g Hitomi) readDate(html string) string {
-	// Date
-	// <span class="date">2011-08-29 17:21:00-05</span>
-	dateRe := regexp.MustCompile(`<span class="date">(.+)</span>`)
-	m := dateRe.FindStringSubmatch(html)
+	m := dateGalleryRe.FindStringSubmatch(html)
 	if m == nil {
 		return ""
 	}
@@ -243,7 +236,11 @@ func (g Hitomi) readIdNode(c *html.Node) string {
 	titleNode := GetElementsByTagName(c, "h1")[0]
 	url := titleNode.FirstChild.Attr[0].Val
 	re := regexp.MustCompile(`/galleries/(.+).html`)
-	return re.FindStringSubmatch(url)[1]
+	m := re.FindStringSubmatch(url)
+	if m == nil {
+		return ""
+	}
+	return m[1]
 }
 
 func (g Hitomi) readCoverNode(c *html.Node) []string {
@@ -295,24 +292,30 @@ func (g Hitomi) ReadEntryNode(n *html.Node) Metadata {
 
 	descNode := GetElementByClassName(n, "dj-desc")
 	aTags := GetElementsByTagName(descNode, "a")
+
+	// /type/doujinshi-all-1.html
+	typeRe := regexp.MustCompile(`/type/(.+)-(.+)-(\d+).html`)
+	// /index-korean-1.html
+	languageRe := regexp.MustCompile(`/index-(.+)-(\d+).html`)
+	// /series/kantai%20collection-all-1.html
+	seriesRe := regexp.MustCompile(`/series/(.+)-(.+)-(\d+).html`)
+
 	for _, c := range aTags {
 		if c.Attr[0].Key != "href" {
 			continue
 		}
 		url := c.Attr[0].Val
-		if strings.HasPrefix(url, "/type/") {
-			// /type/doujinshi-all-1.html
-			re := regexp.MustCompile(`/type/(.+)-(.+)-(.+).html`)
-			galleryType = re.FindStringSubmatch(url)[1]
+		typeMatch := typeRe.FindStringSubmatch(url)
+		if typeMatch != nil {
+			galleryType = UrlDecode(typeMatch[1])
 		}
-		if strings.HasPrefix(url, "/index-") {
-			// /index-korean-1.html
-			re := regexp.MustCompile(`/index-(.+)-1.html`)
-			language = re.FindStringSubmatch(url)[1]
+		languageMatch := languageRe.FindStringSubmatch(url)
+		if languageMatch != nil {
+			language = UrlDecode(languageMatch[1])
 		}
-		if strings.HasPrefix(url, "/series/") {
-			// /series/kantai%20collection-all-1.html
-			series = append(series, c.FirstChild.Data)
+		seriesMatch := seriesRe.FindStringSubmatch(url)
+		if seriesMatch != nil {
+			series = append(series, UrlDecode(seriesMatch[1]))
 		}
 	}
 
