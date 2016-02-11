@@ -167,7 +167,7 @@ func mainSvr() {
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
 	// worker
-	workerNumber := 2
+	workerNumber := 1
 	StartDispatcher(workerNumber)
 
 	port := os.Getenv("PORT")
