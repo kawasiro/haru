@@ -59,6 +59,13 @@ go build
 
 Connect to http://127.0.0.1:3000
 
+## Deploy
+
+``` bash
+docker build -t haru/app .
+docker run --name haru -p 3001:3000 -d haru/app
+```
+
 ## URL
 * http://127.0.0.1:3000/
   * Gallery List

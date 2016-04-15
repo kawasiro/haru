@@ -174,6 +174,6 @@ func mainSvr() {
 	if port == "" {
 		port = "3000"
 	}
-	log.Println("Server started: http://localhost:" + port)
+	log.Println("Server started: http://0.0.0.0:" + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
